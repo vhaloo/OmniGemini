@@ -1,17 +1,49 @@
 # OmniGemini
 
-The Ultimate Live Desktop Assistant powered by Google's Gemini 2.5 Flash Native Audio Preview.
+![OmniGemini Logo](https://img.shields.io/badge/OmniGemini-v0.0.2-blue?style=for-the-badge&logo=google)
 
-OmniGemini blends the incredible low-latency, real-time voice conversational capabilities of the **Gemini Live API** with the deep system-level integration of the **Gemini CLI**.
+The Ultimate Live Desktop Assistant powered by Google's **Gemini 2.5 Flash Native Audio Preview** and **Gemini 3.1 Pro/Flash**.
 
-## Features
-- 🎙️ **Real-Time Voice Chat:** Talk naturally to the AI without needing to press keys.
-- 👁️ **Vision Context:** Push frames from your webcam or your screen to let the AI see what you are talking about.
-- ⚡ **CLI Delegation:** OmniGemini can run PowerShell commands instantly, or delegate complex coding/system tasks to the Gemini CLI (which manages your MCP servers, git workflows, and deeper autonomous tasks).
-- 🔇 **Echo Cancellation (Ducking):** Mutes your microphone transparently when the AI is speaking, preventing annoying feedback loops.
-- 💻 **Cross-Platform PyQt6 GUI:** A high-verbosity terminal-like interface showing you exactly what the AI is thinking, what tools it is triggering, and the results it gets.
+OmniGemini blends the incredible low-latency, real-time voice conversational capabilities of the **Gemini Live API** with the deep system-level integration of the **Gemini CLI**. Talk naturally, share your screen or webcam, and let OmniGemini control your computer, write code, or use Model Context Protocol (MCP) servers on your behalf.
 
-## Installation
+## 🌟 Key Features
+
+- 🎙️ **Real-Time Voice Chat:** Talk naturally to the AI without needing to press keys or wait for text to generate. The connection remains open and responsive.
+- 👁️ **Vision Context (Webcam & Screen):** Push frames from your webcam or your screen to let the AI see exactly what you are talking about with a single click.
+- ⚡ **Deep System Control & MCP Delegation:** 
+  - **Lightweight Tasks:** OmniGemini can run short PowerShell commands instantly to check system state.
+  - **Heavyweight Tasks:** For complex coding, refactoring, or using MCP tools (like GitHub, Google Workspace, File System), OmniGemini autonomously delegates the work to your local [Gemini CLI](https://github.com/google/gemini-cli) using the powerful **Gemini 3.1 Pro** or **Gemini 3.1 Flash** models.
+- 🔇 **Perfect Echo Cancellation (Hard Ducking):** OmniGemini mutes your microphone transparently when the AI is speaking by sending pure silence streams, preventing annoying feedback loops and ensuring rock-solid API connection stability.
+- 🧠 **Dynamic AI Steering:** Adjust the AI's personality, tone, or constraints on the fly using the GUI Steering input.
+- 💻 **Cross-Platform PyQt6 GUI:** A high-verbosity, terminal-like interface showing you exactly what the AI is thinking, what tools it is triggering, the microphone volume levels, and the results it gets.
+- 📝 **Persistent Local Logging:** Every session is automatically saved as a Markdown file in the `logs/` directory, keeping a full history of your conversations, tool calls, and system actions.
+
+---
+
+## 🚀 Installation
+
+We provide robust auto-install scripts to get you up and running in seconds on any platform.
+
+### Windows
+Double-click the `install_windows.bat` file, or run it from your terminal:
+```cmd
+.\install_windows.bat
+```
+This will automatically create a Python virtual environment, install all dependencies, and launch the application. Future launches can be done using the `Launch OmniGemini.bat` file.
+
+### macOS & Linux
+Run the provided shell script:
+```bash
+chmod +x install_unix.sh
+./install_unix.sh
+```
+*(On macOS, ensure you have Python 3.10+ installed via Homebrew or official installers. You may need to grant Terminal permission to access the Camera/Microphone in System Settings).*
+
+---
+
+## 🛠️ Manual Setup
+
+If you prefer to set up the environment manually:
 
 1. Clone this repository:
 ```bash
@@ -33,26 +65,28 @@ source venv/bin/activate
 pip install google-genai sounddevice numpy opencv-python mss Pillow PyQt6 qasync rich
 ```
 
-## Usage
-
-1. Run the application:
+4. Run the application:
 ```bash
 python -m src.main
 ```
-Or use the provided `Launch OmniGemini.bat` file on Windows.
 
-2. Click **⚙ Settings** and paste your `GEMINI_API_KEY`.
-3. Click **Connect** and start talking!
-4. Use the Vision buttons (**Share Webcam**, **Share Screen**) to send a visual context frame to the AI right before you ask it a question about it.
+---
 
-## Integration with Gemini CLI
-OmniGemini works seamlessly with [Gemini CLI](https://github.com/google/gemini-cli). It expects the command `gemini` to be available in your PATH. If your installation is located elsewhere, update the path in the Settings dialog.
+## 🎮 Usage Guide
 
-Whenever you ask for complex operations like "Create a React App" or "Analyze this codebase", OmniGemini runs `gemini --yolo "your task"` in the background, utilizing all your loaded extensions and MCPs automatically.
+1. **Configure API Key:** On first launch, click **⚙ Settings** and paste your `GEMINI_API_KEY`. (Get one from [Google AI Studio](https://aistudio.google.com/app/apikey)).
+2. **Connect:** Click the **Connect** button. The AI will start listening.
+3. **Talk & Type:** Speak directly into your microphone, or use the text input bar at the bottom for precise prompts (like URLs or code snippets).
+4. **Share Vision:** Click **📸 Share Webcam** or **🖥️ Share Screen** right before asking a question about your visual context (e.g., *"What error is shown on my screen right now?"*).
+5. **System Control:** Ask the AI to *"Create a folder on my desktop"* or *"Use Gemini CLI to write a Python script that plays Tetris"*. Watch the high-verbosity logs as it executes your commands!
 
-## Requirements
-- Python 3.10+
-- Microphone and Speakers
+## 🔗 Integration with Gemini CLI
+OmniGemini acts as an intelligent voice frontend for the [Gemini CLI](https://github.com/google/gemini-cli). It expects the command `gemini` to be available in your system's PATH. 
+Whenever you ask for complex operations, OmniGemini runs `gemini --yolo --model gemini-3.1-pro-preview "your task"` autonomously, utilizing all your loaded extensions and MCPs safely.
+
+## ⚠️ Requirements
+- Python 3.10 or higher
+- A working Microphone and Speakers/Headphones
 - A valid Gemini API Key
 
 ## License
