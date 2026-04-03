@@ -45,19 +45,30 @@ class OmniAgent:
                 "required": ["prompt", "model"]
             }
         }
+        self.capture_screen = {
+            "name": "capture_screen",
+            "description": "Captures a current image of the user's computer screen and adds it to your visual context. Use this whenever the user asks you to look at their screen or read something, without waiting for them to send it manually.",
+            "parameters": {"type": "OBJECT", "properties": {}}
+        }
+        self.capture_webcam = {
+            "name": "capture_webcam",
+            "description": "Captures a current image from the user's webcam and adds it to your visual context. Use this to look at the user or their physical environment.",
+            "parameters": {"type": "OBJECT", "properties": {}}
+        }
         
         self.base_instruction = (
             "You are OmniGemini, the ultimate Live Desktop Assistant. "
-            "You have direct access to the user's system via two tools:\n"
+            "You have direct access to the user's system via powerful tools:\n"
             "1. 'run_powershell': For immediate, tiny system checks.\n"
-            "2. 'delegate_gemini': The heavy lifter. The Gemini CLI has all the Model Context Protocol (MCP) servers, full file system access, and system mastery. "
-            "IMPORTANT: If the user asks you to modify files, write code, browse the web, or do anything complex, YOU MUST use 'delegate_gemini' and select the appropriate model. "
-            "Be friendly, conversational, and highly capable. "
-            "You can also see the user's screen and webcam if they explicitly push a frame to you."
+            "2. 'delegate_gemini': The heavy lifter for complex coding, MCP servers, and deep system mastery.\n"
+            "3. 'capture_screen' & 'capture_webcam': Use these tools AT ANY TIME to take a picture and see what the user is doing or looking at. Do not wait for them to push a frame if you can just pull it yourself!\n"
+            "IMPORTANT: If the user asks you to modify files or use MCPs, YOU MUST use 'delegate_gemini' and select the appropriate model. "
+            "Be friendly, conversational, and highly capable."
         )
         self.steering_prompt = ""
         self.on_frame_captured = None 
         self.on_disconnect = None # Callback for GUI to reset state
+        self.auto_vision_active = False
 
     def _get_current_instruction(self):
         instr = self.base_instruction
@@ -81,6 +92,18 @@ class OmniAgent:
             except Exception:
                 pass
 
+    async def toggle_auto_vision(self, state, source="screen"):
+        self.auto_vision_active = state
+        if state:
+            asyncio.create_task(self._auto_vision_task(source))
+            
+    async def _auto_vision_task(self, source):
+        self.logger(f"[dim]Auto-Vision ({source}) started. Sending frames every 2 seconds...[/dim]")
+        while self.running and self.session and self.auto_vision_active:
+            await self.send_vision_frame(source, silent=True)
+            await asyncio.sleep(2.0)
+        self.logger(f"[dim]Auto-Vision stopped.[/dim]")
+
     async def connect(self):
         api_key = self.config.get("api_key")
         if not api_key:
@@ -89,7 +112,7 @@ class OmniAgent:
             
         self._init_log()
         self.client = genai.Client(api_key=api_key)
-        tools = [{"function_declarations": [self.run_powershell, self.delegate_gemini]}]
+        tools = [{"function_declarations": [self.run_powershell, self.delegate_gemini, self.capture_screen, self.capture_webcam]}]
         cfg = {
             "response_modalities": ["AUDIO"],
             "tools": tools,
@@ -225,6 +248,18 @@ class OmniAgent:
                                     out = f"Failed to run Gemini CLI: {e}"
                                     self.logger(f"[red]{out}[/red]")
                                     
+                            elif fc.name == "capture_screen":
+                                self.logger("[bold cyan]Tool:[/bold cyan] capture_screen")
+                                self._append_log("Tool Call", "capture_screen")
+                                await self.send_vision_frame("screen", silent=True)
+                                out = "Screen captured successfully. The image is now in your visual context."
+                                
+                            elif fc.name == "capture_webcam":
+                                self.logger("[bold cyan]Tool:[/bold cyan] capture_webcam")
+                                self._append_log("Tool Call", "capture_webcam")
+                                await self.send_vision_frame("webcam", silent=True)
+                                out = "Webcam captured successfully. The image is now in your visual context."
+                                    
                             out = out[:2000] + "\n... (truncated)" if len(out) > 2000 else out
                             self._append_log("Tool Result", out)
                             func_responses.append(types.FunctionResponse(id=fc.id, name=fc.name, response={"result": out}))
@@ -264,9 +299,10 @@ class OmniAgent:
         except Exception as e:
             self.logger(f"[red]Failed to send text: {e}[/red]")
 
-    async def send_vision_frame(self, source="webcam"):
+    async def send_vision_frame(self, source="webcam", silent=False):
         if not self.session:
-            self.logger("[yellow]Cannot send frame: Not connected.[/yellow]")
+            if not silent:
+                self.logger("[yellow]Cannot send frame: Not connected.[/yellow]")
             return
             
         frame_bytes = None
@@ -280,15 +316,19 @@ class OmniAgent:
             if self.on_frame_captured:
                 self.on_frame_captured(frame_bytes)
                 
-            self.logger(f"[bold blue]Sending {source.capitalize()} frame[/bold blue] ({len(frame_bytes)} bytes) as context...")
+            if not silent:
+                self.logger(f"[bold blue]Sending {source.capitalize()} frame[/bold blue] ({len(frame_bytes)} bytes) as context...")
             self._append_log("Vision", f"Sent {source} frame context.")
             try:
                 await self.session.send_client_content(
                     turns=[{"role": "user", "parts": [{"inline_data": {"mime_type": "image/jpeg", "data": frame_bytes}}]}],
                     turn_complete=True
                 )
-                self.logger("[green]Frame sent successfully.[/green]")
+                if not silent:
+                    self.logger("[green]Frame sent successfully.[/green]")
             except Exception as e:
-                self.logger(f"[red]Failed to send frame: {e}[/red]")
+                if not silent:
+                    self.logger(f"[red]Failed to send frame: {e}[/red]")
         else:
-            self.logger(f"[red]Failed to capture from {source}.[/red]")
+            if not silent:
+                self.logger(f"[red]Failed to capture from {source}.[/red]")

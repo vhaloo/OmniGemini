@@ -159,8 +159,14 @@ class MainWindow(QMainWindow):
         self.send_screen_btn.setStyleSheet("background-color: #9C27B0; color: white; padding: 10px;")
         self.send_screen_btn.clicked.connect(lambda: asyncio.create_task(self.agent.send_vision_frame("screen")))
         
+        self.auto_vision_btn = QPushButton("👁️ Auto-Vision: OFF")
+        self.auto_vision_btn.setStyleSheet("background-color: #333333; color: white; padding: 10px;")
+        self.auto_vision_btn.setCheckable(True)
+        self.auto_vision_btn.clicked.connect(self.toggle_auto_vision)
+        
         vision_layout.addWidget(self.send_cam_btn)
         vision_layout.addWidget(self.send_screen_btn)
+        vision_layout.addWidget(self.auto_vision_btn)
         left_layout.addLayout(vision_layout)
         
         # Log Area
@@ -238,6 +244,16 @@ class MainWindow(QMainWindow):
             asyncio.create_task(self.agent.send_text(text))
             self.text_input.clear()
 
+    def toggle_auto_vision(self, checked):
+        if checked:
+            self.auto_vision_btn.setText("👁️ Auto-Vision: ON")
+            self.auto_vision_btn.setStyleSheet("background-color: #4CAF50; color: white; padding: 10px; font-weight: bold;")
+            asyncio.create_task(self.agent.toggle_auto_vision(True, "screen"))
+        else:
+            self.auto_vision_btn.setText("👁️ Auto-Vision: OFF")
+            self.auto_vision_btn.setStyleSheet("background-color: #333333; color: white; padding: 10px;")
+            asyncio.create_task(self.agent.toggle_auto_vision(False))
+
     def update_vision_preview(self, frame_bytes):
         pixmap = QPixmap()
         pixmap.loadFromData(frame_bytes)
@@ -253,6 +269,11 @@ class MainWindow(QMainWindow):
         self.connect_btn.setText("Connect")
         self.connect_btn.setStyleSheet("background-color: #4CAF50; color: white; padding: 10px; font-weight: bold;")
         self.connect_btn.setEnabled(True)
+        if hasattr(self, 'auto_vision_btn'):
+            self.auto_vision_btn.setChecked(False)
+            self.auto_vision_btn.setText("👁️ Auto-Vision: OFF")
+            self.auto_vision_btn.setStyleSheet("background-color: #333333; color: white; padding: 10px;")
+            asyncio.create_task(self.agent.toggle_auto_vision(False))
 
     def open_settings(self):
         dlg = SettingsDialog(self.agent.config, self)

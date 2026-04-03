@@ -1,6 +1,6 @@
 # OmniGemini
 
-![OmniGemini Logo](https://img.shields.io/badge/OmniGemini-v0.0.2-blue?style=for-the-badge&logo=google)
+![OmniGemini Logo](https://img.shields.io/badge/OmniGemini-v0.0.3-blue?style=for-the-badge&logo=google)
 
 The Ultimate Live Desktop Assistant powered by Google's **Gemini 2.5 Flash Native Audio Preview** and **Gemini 3.1 Pro/Flash**.
 
@@ -23,7 +23,9 @@ The easiest way to get started is to download the auto-installer bundle for your
 ## 🌟 Key Features
 
 - 🎙️ **Real-Time Voice Chat:** Talk naturally to the AI without needing to press keys or wait for text to generate. The connection remains open and responsive.
-- 👁️ **Vision Context (Webcam & Screen):** Push frames from your webcam or your screen to let the AI see exactly what you are talking about with a single click.
+- 👁️ **Vision Context (Webcam & Screen):** Push frames from your webcam or your screen to let the AI see exactly what you are talking about.
+  - **Auto-Vision Streaming:** Enable the "👁️ Auto-Vision" toggle to have your screen continuously streamed to the AI in the background.
+  - **Autonomous Self-Capture:** The AI is equipped with tools to "look" at your screen or your webcam on its own whenever you ask it a question about your visual context!
 - ⚡ **Deep System Control & MCP Delegation:** 
   - **Lightweight Tasks:** OmniGemini can run short PowerShell commands instantly to check system state.
   - **Heavyweight Tasks:** For complex coding, refactoring, or using MCP tools (like GitHub, Google Workspace, File System), OmniGemini autonomously delegates the work to your local [Gemini CLI](https://github.com/google/gemini-cli) using the powerful **Gemini 3.1 Pro** or **Gemini 3.1 Flash** models.
