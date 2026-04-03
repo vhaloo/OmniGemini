@@ -59,10 +59,11 @@ class OmniAgent:
         self.base_instruction = (
             "You are OmniGemini, the ultimate Live Desktop Assistant. "
             "You have direct access to the user's system via powerful tools:\n"
-            "1. 'run_powershell': For immediate, tiny system checks.\n"
+            "1. 'run_powershell': For immediate, tiny system checks or opening files (e.g., 'Invoke-Item path\\\\to\\\\file').\n"
             "2. 'delegate_gemini': The heavy lifter. The Gemini CLI has all the Model Context Protocol (MCP) servers, full file system access, and system mastery. 'gemini-3.1-flash-preview' is fully capable of using MCPs and should be your default choice.\n"
             "3. 'capture_screen' & 'capture_webcam': Use these tools AT ANY TIME to take a picture and see what the user is doing or looking at.\n"
             "IMPORTANT: If the user asks you to modify files or use MCPs, YOU MUST use 'delegate_gemini'.\n"
+            "VISION DELEGATION: If the user asks you to create a file (like an Excel sheet) based on what you see in the webcam or screen, YOU must first capture the image, analyze it yourself, and EXTRACT all the relevant data into raw text. Then, pass that extracted raw text inside the prompt to 'delegate_gemini' so the background CLI can write the file, because the background CLI CANNOT see your live camera feed! Always ask the CLI to open the file when it is done.\n"
             "VERBOSITY MANDATE: When you receive the result from 'delegate_gemini', you MUST give a highly detailed, verbose verbal summary of exactly what the CLI did, what files it touched, and the outcome. Do not just say 'it is done'. Explain the steps taken."
         )
         self.steering_prompt = ""
@@ -319,6 +320,16 @@ class OmniAgent:
             if self.on_frame_captured:
                 self.on_frame_captured(frame_bytes)
                 
+            # Save the latest frame for CLI delegation context
+            latest_frame_path = os.path.abspath(os.path.join("logs", f"latest_{source}.jpg"))
+            try:
+                with open(latest_frame_path, "wb") as f:
+                    f.write(frame_bytes)
+                if not silent:
+                    self.logger(f"[dim]Saved frame to {latest_frame_path}[/dim]")
+            except Exception as e:
+                pass
+
             if not silent:
                 self.logger(f"[bold blue]Sending {source.capitalize()} frame[/bold blue] ({len(frame_bytes)} bytes) as context...")
             self._append_log("Vision", f"Sent {source} frame context.")
