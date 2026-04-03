@@ -40,7 +40,7 @@ class OmniAgent:
                 "type": "OBJECT",
                 "properties": {
                     "prompt": {"type": "STRING", "description": "The exact instruction for the Gemini CLI."},
-                    "model": {"type": "STRING", "description": "Choose 'gemini-2.5-pro' for complex reasoning/coding/MCPs, or 'gemini-2.5-flash' for simple tasks.", "enum": ["gemini-2.5-pro", "gemini-2.5-flash"]}
+                    "model": {"type": "STRING", "description": "Choose 'gemini-3.1-pro-preview' for complex reasoning/coding/MCPs, or 'gemini-3.1-flash-preview' for simple tasks.", "enum": ["gemini-3.1-pro-preview", "gemini-3.1-flash-preview"]}
                 },
                 "required": ["prompt", "model"]
             }
@@ -205,7 +205,7 @@ class OmniAgent:
                                     
                             elif fc.name == "delegate_gemini":
                                 prompt = args.get("prompt") if isinstance(args, dict) else getattr(args, "prompt", str(args))
-                                model_choice = args.get("model", "gemini-2.5-pro") if isinstance(args, dict) else getattr(args, "model", "gemini-2.5-pro")
+                                model_choice = args.get("model", "gemini-3.1-pro-preview") if isinstance(args, dict) else getattr(args, "model", "gemini-3.1-pro-preview")
                                 
                                 self.logger(f"[bold magenta]Tool:[/bold magenta] delegate_gemini\n[dim]Model: {model_choice}\nPrompt: {prompt}[/dim]")
                                 self._append_log("Tool Call", f"delegate_gemini [{model_choice}]: {prompt}")
