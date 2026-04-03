@@ -40,7 +40,7 @@ class OmniAgent:
                 "type": "OBJECT",
                 "properties": {
                     "prompt": {"type": "STRING", "description": "The exact instruction for the Gemini CLI."},
-                    "model": {"type": "STRING", "description": "Choose 'gemini-3.1-pro-preview' for complex reasoning/coding/MCPs, or 'gemini-3.1-flash-preview' for simple tasks.", "enum": ["gemini-3.1-pro-preview", "gemini-3.1-flash-preview"]}
+                    "model": {"type": "STRING", "description": "Choose 'gemini-3.1-flash-preview' as the default for most tasks including MCP usage, file operations, and general coding. Only use 'gemini-3.1-pro-preview' for extremely complex reasoning or massive refactoring.", "enum": ["gemini-3.1-pro-preview", "gemini-3.1-flash-preview"]}
                 },
                 "required": ["prompt", "model"]
             }
@@ -60,10 +60,10 @@ class OmniAgent:
             "You are OmniGemini, the ultimate Live Desktop Assistant. "
             "You have direct access to the user's system via powerful tools:\n"
             "1. 'run_powershell': For immediate, tiny system checks.\n"
-            "2. 'delegate_gemini': The heavy lifter for complex coding, MCP servers, and deep system mastery.\n"
-            "3. 'capture_screen' & 'capture_webcam': Use these tools AT ANY TIME to take a picture and see what the user is doing or looking at. Do not wait for them to push a frame if you can just pull it yourself!\n"
-            "IMPORTANT: If the user asks you to modify files or use MCPs, YOU MUST use 'delegate_gemini' and select the appropriate model. "
-            "Be friendly, conversational, and highly capable."
+            "2. 'delegate_gemini': The heavy lifter. The Gemini CLI has all the Model Context Protocol (MCP) servers, full file system access, and system mastery. 'gemini-3.1-flash-preview' is fully capable of using MCPs and should be your default choice.\n"
+            "3. 'capture_screen' & 'capture_webcam': Use these tools AT ANY TIME to take a picture and see what the user is doing or looking at.\n"
+            "IMPORTANT: If the user asks you to modify files or use MCPs, YOU MUST use 'delegate_gemini'.\n"
+            "VERBOSITY MANDATE: When you receive the result from 'delegate_gemini', you MUST give a highly detailed, verbose verbal summary of exactly what the CLI did, what files it touched, and the outcome. Do not just say 'it is done'. Explain the steps taken."
         )
         self.steering_prompt = ""
         self.on_frame_captured = None 
@@ -228,7 +228,7 @@ class OmniAgent:
                                     
                             elif fc.name == "delegate_gemini":
                                 prompt = args.get("prompt") if isinstance(args, dict) else getattr(args, "prompt", str(args))
-                                model_choice = args.get("model", "gemini-3.1-pro-preview") if isinstance(args, dict) else getattr(args, "model", "gemini-3.1-pro-preview")
+                                model_choice = args.get("model", "gemini-3.1-flash-preview") if isinstance(args, dict) else getattr(args, "model", "gemini-3.1-flash-preview")
                                 
                                 self.logger(f"[bold magenta]Tool:[/bold magenta] delegate_gemini\n[dim]Model: {model_choice}\nPrompt: {prompt}[/dim]")
                                 self._append_log("Tool Call", f"delegate_gemini [{model_choice}]: {prompt}")
@@ -243,7 +243,10 @@ class OmniAgent:
                                     )
                                     stdout, stderr = await process.communicate()
                                     out = (stdout + stderr).decode('utf-8', errors='replace')
-                                    self.logger(f"[green]Gemini CLI Finished.[/green] Output length: {len(out)} chars.")
+                                    
+                                    # Output highly verbose logs to the GUI
+                                    display_out = out[:1000] + "\n... (truncated for display)" if len(out) > 1000 else out
+                                    self.logger(f"[green]Gemini CLI Finished.[/green]\n[dim]{display_out}[/dim]")
                                 except Exception as e:
                                     out = f"Failed to run Gemini CLI: {e}"
                                     self.logger(f"[red]{out}[/red]")
