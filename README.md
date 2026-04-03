@@ -6,6 +6,20 @@ The Ultimate Live Desktop Assistant powered by Google's **Gemini 2.5 Flash Nativ
 
 OmniGemini blends the incredible low-latency, real-time voice conversational capabilities of the **Gemini Live API** with the deep system-level integration of the **Gemini CLI**. Talk naturally, share your screen or webcam, and let OmniGemini control your computer, write code, or use Model Context Protocol (MCP) servers on your behalf.
 
+---
+
+## 💾 Download Installers (Recommended)
+
+The easiest way to get started is to download the auto-installer bundle for your operating system.
+
+**[👉 Download OmniGemini for Windows & macOS/Linux from the Releases Page](https://github.com/vhaloo/OmniGemini/releases/latest)**
+
+1. Download the `.zip` file for your OS.
+2. Extract the folder to your desktop or desired location.
+3. Run the `install_windows.bat` (Windows) or `install_unix.sh` (Mac/Linux) script inside the folder. It will automatically set up Python, install the required libraries, and launch the assistant.
+
+---
+
 ## 🌟 Key Features
 
 - 🎙️ **Real-Time Voice Chat:** Talk naturally to the AI without needing to press keys or wait for text to generate. The connection remains open and responsive.
