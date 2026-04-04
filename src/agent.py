@@ -238,13 +238,19 @@ class OmniAgent:
                                 cli_path = self.config.get("gemini_cli_path", "gemini")
                                 try:
                                     self.logger(f"[dim]Gemini CLI is running synchronously with {model_choice}...[/dim]")
-                                    process = await asyncio.create_subprocess_shell(
-                                        f'"{cli_path}" --yolo --model "{model_choice}" "{prompt}"',
-                                        stdout=asyncio.subprocess.PIPE,
-                                        stderr=asyncio.subprocess.PIPE
+                                    
+                                    # Use a list of arguments to avoid complex Windows shell quoting issues
+                                    command_args = [cli_path, "--yolo", "--model", model_choice, prompt]
+                                    
+                                    res = await asyncio.to_thread(
+                                        subprocess.run, 
+                                        command_args, 
+                                        capture_output=True, 
+                                        text=True, 
+                                        timeout=600, 
+                                        shell=True
                                     )
-                                    stdout, stderr = await process.communicate()
-                                    out = (stdout + stderr).decode('utf-8', errors='replace')
+                                    out = res.stdout + res.stderr
                                     
                                     # Output highly verbose logs to the GUI
                                     display_out = out[:1000] + "\n... (truncated for display)" if len(out) > 1000 else out
