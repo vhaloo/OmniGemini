@@ -239,22 +239,31 @@ class OmniAgent:
                                 try:
                                     self.logger(f"[dim]Gemini CLI is running synchronously with {model_choice}...[/dim]")
                                     
-                                    # Use a list of arguments to avoid complex Windows shell quoting issues
-                                    command_args = [cli_path, "--yolo", "--model", model_choice, prompt]
+                                    # Properly escape the prompt to avoid shell injection/quoting issues on Windows
+                                    safe_prompt = prompt.replace('"', '\\"')
+                                    command_string = f'"{cli_path}" --yolo --model "{model_choice}" "{safe_prompt}"'
                                     
-                                    res = await asyncio.to_thread(
-                                        subprocess.run, 
-                                        command_args, 
-                                        capture_output=True, 
-                                        text=True, 
-                                        timeout=600, 
-                                        shell=True
+                                    # We use asyncio.create_subprocess_shell to stream the output back to the GUI in real time
+                                    process = await asyncio.create_subprocess_shell(
+                                        command_string,
+                                        stdout=asyncio.subprocess.PIPE,
+                                        stderr=asyncio.subprocess.STDOUT
                                     )
-                                    out = res.stdout + res.stderr
                                     
-                                    # Output highly verbose logs to the GUI
-                                    display_out = out[:1000] + "\n... (truncated for display)" if len(out) > 1000 else out
-                                    self.logger(f"[green]Gemini CLI Finished.[/green]\n[dim]{display_out}[/dim]")
+                                    out_chunks = []
+                                    while True:
+                                        line = await process.stdout.readline()
+                                        if not line:
+                                            break
+                                        decoded_line = line.decode('utf-8', errors='replace')
+                                        out_chunks.append(decoded_line)
+                                        # Extremely verbose logging: show every line the CLI outputs in the GUI
+                                        self.logger(f"[dim][CLI][/dim] {decoded_line.strip()}")
+                                        
+                                    await process.wait()
+                                    out = "".join(out_chunks)
+                                    
+                                    self.logger(f"[green]Gemini CLI Finished.[/green]")
                                 except Exception as e:
                                     out = f"Failed to run Gemini CLI: {e}"
                                     self.logger(f"[red]{out}[/red]")
