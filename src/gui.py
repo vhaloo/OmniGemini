@@ -278,7 +278,11 @@ class MainWindow(QMainWindow):
         self.log_message("[dim]Welcome to OmniGemini. Click Connect to begin.[/dim]")
         
         # Fetch MCPs asynchronously on startup
-        asyncio.create_task(self.fetch_mcps())
+        try:
+            loop = asyncio.get_event_loop()
+            loop.create_task(self.fetch_mcps())
+        except RuntimeError:
+            pass
 
     async def fetch_mcps(self):
         try:

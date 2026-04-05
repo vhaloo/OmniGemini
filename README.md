@@ -1,6 +1,6 @@
 # OmniGemini
 
-![OmniGemini Logo](https://img.shields.io/badge/OmniGemini-v0.1.1-blue?style=for-the-badge&logo=google)
+![OmniGemini Logo](https://img.shields.io/badge/OmniGemini-v0.1.2-blue?style=for-the-badge&logo=google)
 
 The Ultimate Live Desktop Assistant powered by Google's **Gemini 2.5 Flash Native Audio Preview** and **Gemini 3.1 Pro/Flash**.
 
