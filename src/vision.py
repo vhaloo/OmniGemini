@@ -32,10 +32,13 @@ class VisionController:
             return buffer.tobytes()
         return None
 
-    def get_screen_frame_bytes(self):
+    def get_screen_frame_bytes(self, monitor_index=0):
         try:
-            # Use the primary monitor
-            monitor = self.sct.monitors[1]
+            # mss monitors[0] is all screens combined. [1] is primary, etc.
+            if monitor_index >= len(self.sct.monitors) or monitor_index < 0:
+                monitor_index = 0
+                
+            monitor = self.sct.monitors[monitor_index]
             sct_img = self.sct.grab(monitor)
             
             # Convert mss image to numpy array
@@ -44,7 +47,7 @@ class VisionController:
             # Drop alpha channel
             img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
             
-            # Resize for bandwidth constraints
+            # Resize for bandwidth constraints (maintaining roughly 720p scale)
             img = cv2.resize(img, (1280, 720))
             ret, buffer = cv2.imencode('.jpg', img, [cv2.IMWRITE_JPEG_QUALITY, 80])
             if ret:

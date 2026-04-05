@@ -1,9 +1,10 @@
 import asyncio
 import ctypes
 import os
+import sounddevice as sd
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QPushButton, QTextEdit, QLineEdit, QCheckBox, 
-                             QFormLayout, QDialog, QDialogButtonBox, QLabel, QSplitter, QProgressBar)
+                             QFormLayout, QDialog, QDialogButtonBox, QLabel, QSplitter, QProgressBar, QComboBox)
 from PyQt6.QtGui import QPixmap, QImage
 from PyQt6.QtCore import Qt, pyqtSignal
 from rich.console import Console
@@ -30,7 +31,7 @@ class SettingsDialog(QDialog):
     def __init__(self, config, parent=None):
         super().__init__(parent)
         self.setWindowTitle("OmniGemini Settings")
-        self.setMinimumWidth(400)
+        self.setMinimumWidth(500)
         self.config = config
         
         layout = QFormLayout(self)
@@ -47,6 +48,29 @@ class SettingsDialog(QDialog):
         
         self.loudness_input = QLineEdit(str(self.config.get("loudness_threshold", 8000)))
         layout.addRow("Interruption Loudness Threshold:", self.loudness_input)
+        
+        # Audio Devices
+        self.in_device_combo = QComboBox()
+        self.in_device_combo.addItem("Default", None)
+        self.out_device_combo = QComboBox()
+        self.out_device_combo.addItem("Default", None)
+        
+        devices = sd.query_devices()
+        current_in = self.config.get("input_device")
+        current_out = self.config.get("output_device")
+        
+        for i, dev in enumerate(devices):
+            if dev['max_input_channels'] > 0:
+                self.in_device_combo.addItem(f"{i}: {dev['name']}", i)
+                if current_in == i:
+                    self.in_device_combo.setCurrentIndex(self.in_device_combo.count() - 1)
+            if dev['max_output_channels'] > 0:
+                self.out_device_combo.addItem(f"{i}: {dev['name']}", i)
+                if current_out == i:
+                    self.out_device_combo.setCurrentIndex(self.out_device_combo.count() - 1)
+                    
+        layout.addRow("Input Device (Mic):", self.in_device_combo)
+        layout.addRow("Output Device (Speaker):", self.out_device_combo)
         
         self.ducking_checkbox = QCheckBox("Enable Speaker Ducking (Echo Cancellation)")
         self.ducking_checkbox.setChecked(self.config.get("ducking_enabled", True))
@@ -68,6 +92,12 @@ class SettingsDialog(QDialog):
             self.config["loudness_threshold"] = int(self.loudness_input.text())
         except ValueError:
             pass
+            
+        in_data = self.in_device_combo.currentData()
+        out_data = self.out_device_combo.currentData()
+        self.config["input_device"] = in_data
+        self.config["output_device"] = out_data
+        
         self.config["ducking_enabled"] = self.ducking_checkbox.isChecked()
         save_config(self.config)
         super().accept()
@@ -77,22 +107,32 @@ class MainWindow(QMainWindow):
     frame_signal = pyqtSignal(bytes)
     volume_signal = pyqtSignal(int)
     disconnect_signal = pyqtSignal()
+    working_signal = pyqtSignal(bool)
 
     def __init__(self, agent):
         super().__init__()
         self.agent = agent
         self.setWindowTitle("OmniGemini - Live Desktop Assistant")
-        self.resize(1200, 800)
+        self.resize(1300, 850)
         self.setStyleSheet("background-color: #121212; color: #FFFFFF;")
         
         self.log_signal.connect(self.append_log)
         self.frame_signal.connect(self.update_vision_preview)
         self.volume_signal.connect(self.update_volume_meter)
         self.disconnect_signal.connect(self.handle_agent_disconnect)
+        self.working_signal.connect(self.toggle_working_indicator)
         
         self.agent.on_frame_captured = self.frame_signal.emit
         self.agent.audio.on_volume_changed = self.volume_signal.emit
         self.agent.on_disconnect = self.disconnect_signal.emit
+        
+        # We monkey-patch the agent to trigger our working signal around delegates
+        original_run_bg = self.agent._run_gemini_background
+        async def hooked_run_bg(cli_path, prompt, model_choice):
+            self.working_signal.emit(True)
+            await original_run_bg(cli_path, prompt, model_choice)
+            self.working_signal.emit(False)
+        self.agent._run_gemini_background = hooked_run_bg
         
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
@@ -104,6 +144,12 @@ class MainWindow(QMainWindow):
         header.setStyleSheet("font-size: 24px; font-weight: bold; color: #2196F3;")
         header_layout.addWidget(header)
         
+        self.working_lbl = QLabel("⚙️ WORKING...")
+        self.working_lbl.setStyleSheet("color: #FFEB3B; font-weight: bold; font-size: 14px;")
+        self.working_lbl.setVisible(False)
+        header_layout.addWidget(self.working_lbl)
+        header_layout.addStretch()
+        
         try:
             is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0 if os.name == 'nt' else os.getuid() == 0
         except Exception:
@@ -111,9 +157,13 @@ class MainWindow(QMainWindow):
             
         power_lbl = QLabel(f"⚡ POWER LEVEL: {'ADMIN' if is_admin else 'USER'}")
         power_lbl.setStyleSheet(f"font-weight: bold; color: {'#F44336' if is_admin else '#FF9800'}; padding: 5px; border: 1px solid;")
-        header_layout.addStretch()
         header_layout.addWidget(power_lbl)
         main_layout.addLayout(header_layout)
+        
+        # Active MCPs Label
+        self.mcp_lbl = QLabel("🔌 Loaded MCPs: Waiting for CLI...")
+        self.mcp_lbl.setStyleSheet("color: #00BCD4; font-size: 11px; font-style: italic; margin-bottom: 5px;")
+        main_layout.addWidget(self.mcp_lbl)
         
         # Content Splitter
         splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -124,17 +174,22 @@ class MainWindow(QMainWindow):
         left_layout = QVBoxLayout(left_panel)
         left_layout.setContentsMargins(0, 0, 0, 0)
         
-        # Top Bar (Connect & Settings)
+        # Top Bar (Connect & Settings & Memory)
         top_layout = QHBoxLayout()
         self.connect_btn = QPushButton("Connect")
         self.connect_btn.setStyleSheet("background-color: #4CAF50; color: white; padding: 10px; font-weight: bold;")
         self.connect_btn.clicked.connect(self.toggle_connection)
+        
+        self.memory_btn = QPushButton("🧠 Memory Manager")
+        self.memory_btn.setStyleSheet("background-color: #9C27B0; color: white; padding: 10px;")
+        self.memory_btn.clicked.connect(self.open_memory_manager)
         
         self.settings_btn = QPushButton("⚙ Settings")
         self.settings_btn.setStyleSheet("background-color: #333333; color: white; padding: 10px;")
         self.settings_btn.clicked.connect(self.open_settings)
         
         top_layout.addWidget(self.connect_btn)
+        top_layout.addWidget(self.memory_btn)
         top_layout.addWidget(self.settings_btn)
         left_layout.addLayout(top_layout)
         
@@ -228,6 +283,28 @@ class MainWindow(QMainWindow):
         
         self.agent.logger = self.log_message
         self.log_message("[dim]Welcome to OmniGemini. Click Connect to begin.[/dim]")
+        
+        # Fetch MCPs asynchronously on startup
+        asyncio.create_task(self.fetch_mcps())
+
+    async def fetch_mcps(self):
+        try:
+            cli_path = self.agent.config.get("gemini_cli_path", "gemini")
+            import subprocess
+            res = await asyncio.to_thread(subprocess.run, [cli_path, "mcp", "list"], capture_output=True, text=True, shell=True)
+            output = res.stdout.strip()
+            mcps = []
+            for line in output.split('\n'):
+                if line.startswith('- '):
+                    parts = line.split(' ')
+                    if len(parts) >= 2:
+                        mcps.append(parts[1])
+            if mcps:
+                self.mcp_lbl.setText(f"🔌 Loaded MCPs: {', '.join(mcps)}")
+            else:
+                self.mcp_lbl.setText("🔌 No MCPs detected or CLI error.")
+        except Exception:
+            self.mcp_lbl.setText("🔌 Failed to load MCPs.")
 
     def log_message(self, msg):
         self.log_signal.emit(msg)
@@ -274,10 +351,16 @@ class MainWindow(QMainWindow):
             self.auto_vision_btn.setText("👁️ Auto-Vision: OFF")
             self.auto_vision_btn.setStyleSheet("background-color: #333333; color: white; padding: 10px;")
             asyncio.create_task(self.agent.toggle_auto_vision(False))
+            
+    def toggle_working_indicator(self, is_working):
+        self.working_lbl.setVisible(is_working)
 
     def open_settings(self):
         dlg = SettingsDialog(self.agent.config, self)
         dlg.exec()
+        
+    def open_memory_manager(self):
+        asyncio.create_task(self.agent.send_text("Fetch all my memories using save_memory tool and read them out loud to me."))
 
     def toggle_connection(self):
         if not self.agent.running:
@@ -308,8 +391,6 @@ class MainWindow(QMainWindow):
         
     def closeEvent(self, event):
         if self.agent.running:
-            # We must disconnect synchronously for the close event, 
-            # but disconnect is async. We run it in the existing loop.
             try:
                 loop = asyncio.get_event_loop()
                 loop.create_task(self.agent.disconnect())

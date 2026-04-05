@@ -47,8 +47,13 @@ class OmniAgent:
         }
         self.capture_screen = {
             "name": "capture_screen",
-            "description": "Captures a current image of the user's computer screen and adds it to your visual context. Use this whenever the user asks you to look at their screen or read something, without waiting for them to send it manually.",
-            "parameters": {"type": "OBJECT", "properties": {}}
+            "description": "Captures a current image of the user's computer screen and adds it to your visual context. Use this whenever the user asks you to look at their screen or read something.",
+            "parameters": {
+                "type": "OBJECT", 
+                "properties": {
+                    "monitor_index": {"type": "INTEGER", "description": "Optional. 0 for all monitors combined (default), 1 for primary, 2 for secondary, etc."}
+                }
+            }
         }
         self.capture_webcam = {
             "name": "capture_webcam",
@@ -269,10 +274,11 @@ class OmniAgent:
                                     self.logger(f"[red]{out}[/red]")
                                     
                             elif fc.name == "capture_screen":
-                                self.logger("[bold cyan]Tool:[/bold cyan] capture_screen")
-                                self._append_log("Tool Call", "capture_screen")
-                                await self.send_vision_frame("screen", silent=True)
-                                out = "Screen captured successfully. The image is now in your visual context."
+                                monitor_idx = args.get("monitor_index", 0) if isinstance(args, dict) else getattr(args, "monitor_index", 0)
+                                self.logger(f"[bold cyan]Tool:[/bold cyan] capture_screen (monitor {monitor_idx})")
+                                self._append_log("Tool Call", f"capture_screen (monitor {monitor_idx})")
+                                await self.send_vision_frame("screen", monitor_index=monitor_idx, silent=True)
+                                out = f"Screen {monitor_idx} captured successfully. The image is now in your visual context."
                                 
                             elif fc.name == "capture_webcam":
                                 self.logger("[bold cyan]Tool:[/bold cyan] capture_webcam")
@@ -319,7 +325,7 @@ class OmniAgent:
         except Exception as e:
             self.logger(f"[red]Failed to send text: {e}[/red]")
 
-    async def send_vision_frame(self, source="webcam", silent=False):
+    async def send_vision_frame(self, source="webcam", monitor_index=0, silent=False):
         if not self.session:
             if not silent:
                 self.logger("[yellow]Cannot send frame: Not connected.[/yellow]")
@@ -330,7 +336,7 @@ class OmniAgent:
             await asyncio.to_thread(self.vision.start_camera)
             frame_bytes = await asyncio.to_thread(self.vision.get_camera_frame_bytes)
         elif source == "screen":
-            frame_bytes = await asyncio.to_thread(self.vision.get_screen_frame_bytes)
+            frame_bytes = await asyncio.to_thread(self.vision.get_screen_frame_bytes, monitor_index)
             
         if frame_bytes:
             if self.on_frame_captured:

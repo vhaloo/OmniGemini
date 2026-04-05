@@ -8,7 +8,9 @@ DEFAULT_CONFIG = {
     "gemini_cli_path": "gemini",
     "camera_index": 0,
     "ducking_enabled": True,
-    "loudness_threshold": 8000
+    "loudness_threshold": 8000,
+    "input_device": None,
+    "output_device": None
 }
 
 def load_config():

@@ -20,11 +20,16 @@ class AudioController:
 
     def start(self):
         self.running = True
+        in_dev = self.config.get("input_device")
+        out_dev = self.config.get("output_device")
+        
         self.stream_in = sd.RawInputStream(
-            samplerate=SEND_SAMPLE_RATE, channels=1, dtype='int16', blocksize=CHUNK_SIZE
+            samplerate=SEND_SAMPLE_RATE, channels=1, dtype='int16', blocksize=CHUNK_SIZE,
+            device=in_dev if in_dev is not None else None
         )
         self.stream_out = sd.RawOutputStream(
-            samplerate=RECEIVE_SAMPLE_RATE, channels=1, dtype='int16'
+            samplerate=RECEIVE_SAMPLE_RATE, channels=1, dtype='int16',
+            device=out_dev if out_dev is not None else None
         )
         self.stream_in.start()
         self.stream_out.start()

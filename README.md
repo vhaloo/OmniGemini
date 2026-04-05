@@ -1,6 +1,6 @@
 # OmniGemini
 
-![OmniGemini Logo](https://img.shields.io/badge/OmniGemini-v0.0.6-blue?style=for-the-badge&logo=google)
+![OmniGemini Logo](https://img.shields.io/badge/OmniGemini-v0.1.0-blue?style=for-the-badge&logo=google)
 
 The Ultimate Live Desktop Assistant powered by Google's **Gemini 2.5 Flash Native Audio Preview** and **Gemini 3.1 Pro/Flash**.
 
@@ -23,7 +23,9 @@ The easiest way to get started is to download the auto-installer bundle for your
 ## 🌟 Key Features
 
 - 🎙️ **Real-Time Voice Chat:** Talk naturally to the AI without needing to press keys or wait for text to generate.
-- 👁️ **Vision Context (Webcam & Screen):** Push frames from your webcam or your screen.
+  - **Audio Device Selection:** Choose your preferred input (mic) and output (speaker) devices directly from the settings menu.
+- 👁️ **Vision Context (Webcam & Screen):** Push frames from your webcam or your screens.
+  - **Multi-Monitor Support:** OmniGemini captures all your monitors by default, or you can ask it to focus on a specific monitor.
   - **Auto-Vision Streaming:** Continuous background screen streaming.
   - **Autonomous Self-Capture:** The AI can pull frames itself using tools.
 - ⚡ **Deep System Control & MCP Delegation:** 
@@ -31,8 +33,8 @@ The easiest way to get started is to download the auto-installer bundle for your
   - **File Operations:** Create, modify, or analyze files (including Excel, PDF, code) based on voice or vision.
   - **Model Choice:** Automatically uses **Gemini 3.1 Flash** for speed or **Gemini 3.1 Pro** for deep reasoning.
 - 🔇 **Perfect Echo Cancellation (Hard Ducking):** Zero-feedback audio stream stability.
-- 🧠 **Dynamic AI Steering:** Adjust AI personality on the fly.
-- 💻 **High Verbosity GUI:** See exactly what the AI is thinking and doing in the PyQt6 terminal logs.
+- 🧠 **Dynamic AI Steering & Memory:** Adjust AI personality on the fly, or use the **Memory Manager** button to recall and summarize all your persistently saved preferences and workflows.
+- 💻 **High Verbosity GUI:** See exactly what the AI is thinking and doing in the PyQt6 terminal logs, complete with an **Active MCPs** loaded list and a background task spinner.
 - 📝 **Persistent Local Logging:** Full Markdown conversation history in `logs/`.
 
 ---
