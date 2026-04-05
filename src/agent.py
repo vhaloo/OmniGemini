@@ -75,6 +75,7 @@ class OmniAgent:
         self.steering_prompt = ""
         self.on_frame_captured = None 
         self.on_disconnect = None # Callback for GUI to reset state
+        self.on_working_state_changed = None # Callback for GUI spinner
         self.auto_vision_active = False
 
     def _get_current_instruction(self):
@@ -242,6 +243,9 @@ class OmniAgent:
                                 
                                 cli_path = self.config.get("gemini_cli_path", "gemini")
                                 try:
+                                    if self.on_working_state_changed:
+                                        self.on_working_state_changed(True)
+                                        
                                     self.logger(f"[dim]Gemini CLI is running synchronously with {model_choice}...[/dim]")
                                     
                                     # Properly escape the prompt to avoid shell injection/quoting issues on Windows
@@ -272,6 +276,9 @@ class OmniAgent:
                                 except Exception as e:
                                     out = f"Failed to run Gemini CLI: {e}"
                                     self.logger(f"[red]{out}[/red]")
+                                finally:
+                                    if self.on_working_state_changed:
+                                        self.on_working_state_changed(False)
                                     
                             elif fc.name == "capture_screen":
                                 monitor_idx = args.get("monitor_index", 0) if isinstance(args, dict) else getattr(args, "monitor_index", 0)

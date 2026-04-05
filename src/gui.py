@@ -125,14 +125,7 @@ class MainWindow(QMainWindow):
         self.agent.on_frame_captured = self.frame_signal.emit
         self.agent.audio.on_volume_changed = self.volume_signal.emit
         self.agent.on_disconnect = self.disconnect_signal.emit
-        
-        # We monkey-patch the agent to trigger our working signal around delegates
-        original_run_bg = self.agent._run_gemini_background
-        async def hooked_run_bg(cli_path, prompt, model_choice):
-            self.working_signal.emit(True)
-            await original_run_bg(cli_path, prompt, model_choice)
-            self.working_signal.emit(False)
-        self.agent._run_gemini_background = hooked_run_bg
+        self.agent.on_working_state_changed = self.working_signal.emit
         
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
