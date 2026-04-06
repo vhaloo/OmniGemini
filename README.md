@@ -1,8 +1,8 @@
 # OmniGemini
 
-![OmniGemini Logo](https://img.shields.io/badge/OmniGemini-v0.1.2-blue?style=for-the-badge&logo=google)
+![OmniGemini Logo](https://img.shields.io/badge/OmniGemini-v0.1.3-blue?style=for-the-badge&logo=google)
 
-The Ultimate Live Desktop Assistant powered by Google's **Gemini 2.5 Flash Native Audio Preview** and **Gemini 3.1 Pro/Flash**.
+The Ultimate Live Desktop Assistant powered by Google's **Gemini 3.1 Flash Live Preview** and **Gemini 3.1 Pro/Flash**.
 
 OmniGemini blends the incredible low-latency, real-time voice conversational capabilities of the **Gemini Live API** with the deep system-level integration of the **Gemini CLI**. Talk naturally, share your screen or webcam, and let OmniGemini control your computer, manage your emails, or use Model Context Protocol (MCP) servers on your behalf.
 

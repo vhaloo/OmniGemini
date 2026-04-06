@@ -7,7 +7,7 @@ from google.genai import types
 from src.audio import AudioController
 from src.vision import VisionController
 
-MODEL = "gemini-2.5-flash-native-audio-preview-12-2025"
+MODEL = "gemini-3.1-flash-live-preview"
 
 class OmniAgent:
     def __init__(self, config, logger):
