@@ -255,15 +255,19 @@ class OmniAgent:
                                     if not resolved_path:
                                         resolved_path = cli_path # Fallback to whatever was provided
                                         
-                                    # Build a safe argument list
-                                    args_list = [resolved_path, "--yolo", "--model", model_choice, prompt]
+                                    # Build a safe argument list with the -p flag to force headless execution
+                                    args_list = [resolved_path, "--yolo", "--model", model_choice, "-p", prompt]
                                     
-                                    # We use asyncio.create_subprocess_exec with the resolved absolute path.
-                                    # This avoids the need for shell=True or cmd.exe, completely preventing quoting errors.
-                                    process = await asyncio.create_subprocess_exec(
-                                        *args_list,
+                                    # Convert to a properly escaped string for the Windows shell
+                                    cmd_str = subprocess.list2cmdline(args_list)
+                                    
+                                    # We use asyncio.create_subprocess_shell with the exact string.
+                                    # Passing DEVNULL to stdin guarantees the CLI won't hang waiting for user input.
+                                    process = await asyncio.create_subprocess_shell(
+                                        cmd_str,
                                         stdout=asyncio.subprocess.PIPE,
-                                        stderr=asyncio.subprocess.STDOUT
+                                        stderr=asyncio.subprocess.STDOUT,
+                                        stdin=asyncio.subprocess.DEVNULL
                                     )
                                     
                                     out_chunks = []
