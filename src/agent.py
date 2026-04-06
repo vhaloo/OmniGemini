@@ -249,13 +249,16 @@ class OmniAgent:
                                         
                                     self.logger(f"[dim]Gemini CLI is running synchronously with {model_choice}...[/dim]")
                                     
-                                    # Properly escape the prompt to avoid shell injection/quoting issues on Windows
-                                    safe_prompt = prompt.replace('"', '\\"')
-                                    command_string = f'"{cli_path}" --yolo --model "{model_choice}" "{safe_prompt}"'
+                                    # Build a safe argument list
+                                    args_list = [cli_path, "--yolo", "--model", model_choice, prompt]
                                     
-                                    # We use asyncio.create_subprocess_shell to stream the output back to the GUI in real time
-                                    process = await asyncio.create_subprocess_shell(
-                                        command_string,
+                                    # On Windows, executing a .cmd script via create_subprocess_exec fails. 
+                                    # We prepend cmd.exe /c to ensure it resolves the PATH and executes correctly without messy string escaping.
+                                    if os.name == 'nt':
+                                        args_list = ["cmd.exe", "/c"] + args_list
+                                        
+                                    process = await asyncio.create_subprocess_exec(
+                                        *args_list,
                                         stdout=asyncio.subprocess.PIPE,
                                         stderr=asyncio.subprocess.STDOUT
                                     )
