@@ -263,10 +263,20 @@ class OmniAgent:
                                     
                                     # We use create_subprocess_shell. It natively understands .cmd files and PATH.
                                     # The -p flag prevents the CLI from becoming interactive.
+                                    # Critical Windows Fix: node-pty (used by Gemini CLI) crashes with 'AttachConsole failed' 
+                                    # if it doesn't have a console environment. CREATE_NO_WINDOW provisions a hidden console.
+                                    # We also pipe stdin to DEVNULL to guarantee it never hangs waiting for input.
+                                    
+                                    creation_flags = 0
+                                    if os.name == 'nt':
+                                        creation_flags = subprocess.CREATE_NO_WINDOW
+                                        
                                     process = await asyncio.create_subprocess_shell(
                                         cmd_str,
                                         stdout=asyncio.subprocess.PIPE,
-                                        stderr=asyncio.subprocess.STDOUT
+                                        stderr=asyncio.subprocess.STDOUT,
+                                        stdin=subprocess.DEVNULL,
+                                        creationflags=creation_flags
                                     )
                                     
                                     out_chunks = []
