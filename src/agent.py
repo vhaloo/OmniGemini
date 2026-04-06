@@ -69,6 +69,7 @@ class OmniAgent:
             "2. 'delegate_gemini': The heavy lifter. The Gemini CLI has all the Model Context Protocol (MCP) servers, full file system access, and system mastery. 'gemini-3.1-flash-preview' is fully capable of using MCPs and should be your default choice.\n"
             "3. 'capture_screen' & 'capture_webcam': Use these tools AT ANY TIME to take a picture and see what the user is doing or looking at.\n"
             "IMPORTANT: If the user asks you to modify files, browse the web, or use MCPs (like Google Workspace for GMAIL/Calendar/Docs), YOU MUST use 'delegate_gemini'.\n"
+            "PROACTIVE MANDATE: You are extremely PROACTIVE. Do not just wait for commands. Anticipate the user's needs. Offer to automatically fix issues, suggest the next logical step, or take initiative to use your tools to improve their workflow. If they are stuck, immediately offer a concrete action you can take to help.\n"
             "GMAIL DELEGATION: You have full access to the user's emails via the Google Workspace MCP. If the user asks 'read my emails', 'what is my last email', or 'send an email', use 'delegate_gemini' and ask the CLI to fetch or send the emails. \n"
             "VISION DELEGATION: If the user asks you to create a file (like an Excel sheet) based on what you see in the webcam or screen, YOU must first capture the image, analyze it yourself, and EXTRACT all the relevant data into raw text. Then, pass that extracted raw text inside the prompt to 'delegate_gemini' so the background CLI can write the file, because the background CLI CANNOT see your live camera feed! Always ask the CLI to open the file when it is done.\n"
             "VERBOSITY MANDATE: When you receive the result from 'delegate_gemini', you MUST give a highly detailed, verbose verbal summary of exactly what the CLI did, what files it touched, or the contents of the emails it fetched. Do not just say 'it is done'. Explain the details."
@@ -250,22 +251,22 @@ class OmniAgent:
                                         
                                     self.logger(f"[dim]Gemini CLI is running synchronously with {model_choice}...[/dim]")
                                     
-                                    # Resolve the absolute path of the CLI executable (vital for Windows .cmd scripts)
+                                    # Resolve absolute path for Windows to be absolutely sure
                                     resolved_path = shutil.which(cli_path)
                                     if not resolved_path:
-                                        resolved_path = cli_path # Fallback to whatever was provided
+                                        resolved_path = cli_path
                                         
-                                    # The ONLY robust way to execute a .cmd script on Windows via asyncio
-                                    # without breaking on complex quotes or causing "not recognized" errors
-                                    # is to use create_subprocess_exec with the absolute path and a pure list of arguments.
-                                    # We also add --include-directories C:\ to break out of the workspace sandbox and grant full computer control.
                                     args_list = [resolved_path, "--yolo", "--model", model_choice, "--include-directories", "C:\\", "-p", prompt]
                                     
-                                    process = await asyncio.create_subprocess_exec(
-                                        *args_list,
+                                    # Convert list to a perfectly escaped string for the shell
+                                    cmd_str = subprocess.list2cmdline(args_list)
+                                    
+                                    # We use create_subprocess_shell. It natively understands .cmd files and PATH.
+                                    # The -p flag prevents the CLI from becoming interactive.
+                                    process = await asyncio.create_subprocess_shell(
+                                        cmd_str,
                                         stdout=asyncio.subprocess.PIPE,
-                                        stderr=asyncio.subprocess.STDOUT,
-                                        stdin=asyncio.subprocess.DEVNULL
+                                        stderr=asyncio.subprocess.STDOUT
                                     )
                                     
                                     out_chunks = []
