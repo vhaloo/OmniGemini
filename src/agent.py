@@ -1,6 +1,7 @@
 import asyncio
 import subprocess
 import os
+import shutil
 from datetime import datetime
 from google import genai
 from google.genai import types
@@ -40,7 +41,7 @@ class OmniAgent:
                 "type": "OBJECT",
                 "properties": {
                     "prompt": {"type": "STRING", "description": "The exact instruction for the Gemini CLI."},
-                    "model": {"type": "STRING", "description": "Choose 'gemini-3.1-flash-preview' as the default for most tasks including MCP usage, file operations, and general coding. Only use 'gemini-3.1-pro-preview' for extremely complex reasoning or massive refactoring.", "enum": ["gemini-3.1-pro-preview", "gemini-3.1-flash-preview"]}
+                    "model": {"type": "STRING", "description": "Choose 'flash' as the default for most tasks including MCP usage, file operations, and general coding. Only use 'pro' for extremely complex reasoning or massive refactoring.", "enum": ["pro", "flash"]}
                 },
                 "required": ["prompt", "model"]
             }
@@ -249,14 +250,16 @@ class OmniAgent:
                                         
                                     self.logger(f"[dim]Gemini CLI is running synchronously with {model_choice}...[/dim]")
                                     
-                                    # Build a safe argument list
-                                    args_list = [cli_path, "--yolo", "--model", model_choice, prompt]
-                                    
-                                    # On Windows, executing a .cmd script via create_subprocess_exec fails. 
-                                    # We prepend cmd.exe /c to ensure it resolves the PATH and executes correctly without messy string escaping.
-                                    if os.name == 'nt':
-                                        args_list = ["cmd.exe", "/c"] + args_list
+                                    # Resolve the absolute path of the CLI executable (vital for Windows .cmd scripts)
+                                    resolved_path = shutil.which(cli_path)
+                                    if not resolved_path:
+                                        resolved_path = cli_path # Fallback to whatever was provided
                                         
+                                    # Build a safe argument list
+                                    args_list = [resolved_path, "--yolo", "--model", model_choice, prompt]
+                                    
+                                    # We use asyncio.create_subprocess_exec with the resolved absolute path.
+                                    # This avoids the need for shell=True or cmd.exe, completely preventing quoting errors.
                                     process = await asyncio.create_subprocess_exec(
                                         *args_list,
                                         stdout=asyncio.subprocess.PIPE,
