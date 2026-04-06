@@ -150,6 +150,14 @@ class MainWindow(QMainWindow):
             
         power_lbl = QLabel(f"⚡ POWER LEVEL: {'ADMIN' if is_admin else 'USER'}")
         power_lbl.setStyleSheet(f"font-weight: bold; color: {'#F44336' if is_admin else '#FF9800'}; padding: 5px; border: 1px solid;")
+        power_lbl.setToolTip(
+            "<b>USER MODE (Default)</b><br>"
+            "<i>Pros:</i> Safe. The AI cannot accidentally modify system files or change critical Windows settings.<br>"
+            "<i>Cons:</i> The AI cannot install software, edit files in protected folders (like Program Files), or run administrative PowerShell commands.<br><br>"
+            "<b>ADMIN MODE (Run as Administrator)</b><br>"
+            "<i>Pros:</i> Maximum Power. The AI can manage your entire computer, install programs, edit any file, and fully utilize all MCP capabilities.<br>"
+            "<i>Cons:</i> Dangerous. The AI has the power to delete important files or execute risky scripts if instructed to do so."
+        )
         header_layout.addWidget(power_lbl)
         main_layout.addLayout(header_layout)
         

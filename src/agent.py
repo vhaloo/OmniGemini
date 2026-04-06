@@ -255,16 +255,14 @@ class OmniAgent:
                                     if not resolved_path:
                                         resolved_path = cli_path # Fallback to whatever was provided
                                         
-                                    # Build a safe argument list with the -p flag to force headless execution
-                                    args_list = [resolved_path, "--yolo", "--model", model_choice, "-p", prompt]
+                                    # The ONLY robust way to execute a .cmd script on Windows via asyncio
+                                    # without breaking on complex quotes or causing "not recognized" errors
+                                    # is to use create_subprocess_exec with the absolute path and a pure list of arguments.
+                                    # We also add --include-directories C:\ to break out of the workspace sandbox and grant full computer control.
+                                    args_list = [resolved_path, "--yolo", "--model", model_choice, "--include-directories", "C:\\", "-p", prompt]
                                     
-                                    # Convert to a properly escaped string for the Windows shell
-                                    cmd_str = subprocess.list2cmdline(args_list)
-                                    
-                                    # We use asyncio.create_subprocess_shell with the exact string.
-                                    # Passing DEVNULL to stdin guarantees the CLI won't hang waiting for user input.
-                                    process = await asyncio.create_subprocess_shell(
-                                        cmd_str,
+                                    process = await asyncio.create_subprocess_exec(
+                                        *args_list,
                                         stdout=asyncio.subprocess.PIPE,
                                         stderr=asyncio.subprocess.STDOUT,
                                         stdin=asyncio.subprocess.DEVNULL
