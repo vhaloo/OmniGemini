@@ -211,6 +211,7 @@ class OmniAgent:
 
                     if response.tool_call:
                         func_responses = []
+                        frames_to_send = []
                         for fc in response.tool_call.function_calls:
                             args = fc.args
                             
@@ -284,14 +285,14 @@ class OmniAgent:
                                 monitor_idx = args.get("monitor_index", 0) if isinstance(args, dict) else getattr(args, "monitor_index", 0)
                                 self.logger(f"[bold cyan]Tool:[/bold cyan] capture_screen (monitor {monitor_idx})")
                                 self._append_log("Tool Call", f"capture_screen (monitor {monitor_idx})")
-                                await self.send_vision_frame("screen", monitor_index=monitor_idx, silent=True)
-                                out = f"Screen {monitor_idx} captured successfully. The image is now in your visual context."
+                                frames_to_send.append(("screen", monitor_idx))
+                                out = f"Screen {monitor_idx} captured successfully. The image will be sent to your visual context immediately after this response."
                                 
                             elif fc.name == "capture_webcam":
                                 self.logger("[bold cyan]Tool:[/bold cyan] capture_webcam")
                                 self._append_log("Tool Call", "capture_webcam")
-                                await self.send_vision_frame("webcam", silent=True)
-                                out = "Webcam captured successfully. The image is now in your visual context."
+                                frames_to_send.append(("webcam", 0))
+                                out = "Webcam captured successfully. The image will be sent to your visual context immediately after this response."
                                     
                             out = out[:2000] + "\n... (truncated)" if len(out) > 2000 else out
                             self._append_log("Tool Result", out)
@@ -302,8 +303,12 @@ class OmniAgent:
                                 try:
                                     self.logger("[dim]Sending tool result back to Live API...[/dim]")
                                     await self.session.send_tool_response(function_responses=func_responses)
+                                    
+                                    # Send frames AFTER resolving the tool call to respect the protocol
+                                    for source, monitor_idx in frames_to_send:
+                                        await self.send_vision_frame(source, monitor_index=monitor_idx, silent=True)
                                 except Exception as e:
-                                    self.logger(f"[red]Failed to send tool response: {e}[/red]")
+                                    self.logger(f"[red]Failed to send tool response or frame: {e}[/red]")
                 
                 # Async loop exit naturally
                 await asyncio.sleep(0.1)
