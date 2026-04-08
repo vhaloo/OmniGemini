@@ -404,7 +404,8 @@ class MainWindow(QMainWindow):
         
         self.agent.logger = self.log_message
         self.log_message("[dim]Welcome to OmniGemini. Fetching system readiness...[/dim]")
-        asyncio.create_task(self.fetch_mcps_and_warmup())
+        # Use QTimer to start the warmup task once the event loop is actually running
+        QTimer.singleShot(0, lambda: asyncio.create_task(self.fetch_mcps_and_warmup()))
 
     def toggle_verbose_logging(self, state):
         self.agent.config["verbose_logging"] = bool(state)
