@@ -1,9 +1,9 @@
 # OmniGemini Project History
 
-## v0.5.0 Major Overhaul
-- **DPI Scaling:** Added `QApplication.setHighDpiScaleFactorRoundingPolicy` to fix blurriness and spacing issues on Full HD and 4K displays.
-- **Model Upgrades:** Successfully integrated `gemini-2.5-pro` for complex delegations and `gemini-2.5-flash` for high-volume tasks. (Reverted from 3.1 as they are not yet supported by the CLI).
-- **Dev Verbosity Toggle:** Solved the issue of overwhelming log output by implementing a "Dev Verbose" checkbox. It dynamically filters out `[dim]` system logs and JSON outputs from the GUI, retaining only the clean conversational transcripts when unchecked.
-- **Working Animation:** Designed a colorful, time-based cycling hex-palette for the "⚙️ WORKING..." text to make it visually engaging without impacting performance.
-- **Text Zooming Hurdle:** Previously, changing the font size broke rich text/HTML formats. Overcame this by using `QTextEdit`'s native `.zoomIn(1)` and `.zoomOut(1)` methods for robust scaling.
-- **UX Tooltips:** Added comprehensive tooltips to all buttons and settings (e.g. explaining the echo-cancellation and noise threshold logic) to drastically improve usability.
+## v0.5.0 Stable Release
+- **Session Manager:** Overhauled the "Memory" feature. It now opens a `Session Manager` dialog that lists all Markdown logs in the `logs/` directory. Selecting a log reloads the conversation history into the agent's memory, allowing the user to resume any previous session naturally.
+- **Connection Stability:** Fixed the persistent `1007 Invalid Argument` WebSocket disconnects by implementing strict ASCII regex sanitization and hard payload truncation (800 chars) for background task results.
+- **Deprecated API Fix:** Purged the deprecated `.send()` method from the `google-genai` SDK and replaced it with the modern `send_client_content()` using the required `{"role": "user", "parts": [...]}` dictionary schema.
+- **Model Realignment:** Reverted the Live API to `gemini-2.5-flash-native-audio-preview-12-2025` (the only stable model for the Multimodal Live WebSocket) while keeping the background CLI agent on **Gemini 3.1 Pro** for complex tasks.
+- **DPI & UI:** Fully enabled High-DPI support and fixed the `A+` / `A-` zoom buttons by overriding the document's default font size, ensuring rich HTML formatting is preserved during scaling.
+- **Error Handling:** Added non-interactive safety constraints to all background CLI prompts to prevent the agent from stalling on interactive shells.

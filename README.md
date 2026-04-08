@@ -2,7 +2,7 @@
 
 ![OmniGemini Logo](https://img.shields.io/badge/OmniGemini-v0.5.0-blue?style=for-the-badge&logo=google)
 
-The Ultimate Live Desktop Assistant powered by Google's **Gemini 3.1 Flash Live Preview** and **Gemini 3.1 Pro/Flash**.
+The Ultimate Live Desktop Assistant powered by Google's **Gemini Live API** and **Gemini CLI**.
 
 OmniGemini blends the incredible low-latency, real-time voice conversational capabilities of the **Gemini Live API** with the deep system-level integration of the **Gemini CLI**. Talk naturally, share your screen or webcam, and let OmniGemini control your computer, manage your emails, or use Model Context Protocol (MCP) servers on your behalf.
 
@@ -14,61 +14,38 @@ The easiest way to get started is to download the auto-installer bundle for your
 
 **[👉 Download OmniGemini for Windows & macOS/Linux from the Releases Page](https://github.com/vhaloo/OmniGemini/releases/latest)**
 
-1. Download the `.zip` file for your OS.
-2. Extract the folder to your desktop or desired location.
-3. Run the `install_windows.bat` (Windows) or `install_unix.sh` (Mac/Linux) script inside the folder. It will automatically set up Python, install the required libraries, and launch the assistant.
+---
+
+## 🌟 Key Features (v0.5.0 Major Overhaul)
+
+- 🎙️ **Real-Time Voice Chat:** Talk naturally without waiting for text generation. Powered by `gemini-2.5-flash-native-audio-preview-12-2025`.
+- 👁️ **Vision Context:** High-speed capture of webcam and multi-monitor setups.
+- ⚡ **Deep CLI Delegation:** Background tasks (coding, emails, browsing) are delegated to the **Gemini CLI** using **Gemini 3.1 Pro** for massive reasoning power.
+- 🧠 **Session Manager:** Reload any previous conversation from your local logs into current memory to continue where you left off.
+- 📺 **4K/High-DPI Support:** Crisp text and beautiful multicolored animated indicators.
+- 🔇 **Robust Stability:** Sanitized WebSocket payloads prevent disconnects during complex task reporting.
+- 🔍 **Dev Verbosity Toggle:** Hide technical system noise with one click.
+- 📝 **Persistent Local Logging:** Full conversation history preserved in `logs/`.
 
 ---
 
-## 🌟 Key Features
+## 🚀 Quick Start (Development)
 
-- 🎙️ **Real-Time Voice Chat:** Talk naturally to the AI without needing to press keys or wait for text to generate.
-  - **Audio Device Selection:** Choose your preferred input (mic) and output (speaker) devices directly from the settings menu.
-- 👁️ **Vision Context (Webcam & Screen):** Push frames from your webcam or your screens.
-  - **Multi-Monitor Support:** OmniGemini captures all your monitors by default, or you can ask it to focus on a specific monitor.
-  - **Auto-Vision Streaming:** Continuous background screen streaming.
-  - **Autonomous Self-Capture:** The AI can pull frames itself using tools.
-- ⚡ **Deep System Control & MCP Delegation:** 
-  - **Full System Power (No Sandbox):** OmniGemini explicitly disables workspace sandboxing when delegating tasks, giving the AI complete freedom to read, modify, or create files anywhere on your hard drive (especially powerful when launched in Admin mode).
-  - **Gmail & Workspace:** Ask OmniGemini to "read my last 5 emails" or "send an email to boss@example.com". It will delegate the task to the Google Workspace MCP securely.
-  - **File Operations:** Create, modify, or analyze files (including Excel, PDF, code) based on voice or vision.
-  - **Model Choice:** Automatically uses **Gemini 2.5 Flash** for speed or **Gemini 2.5 Pro** for deep reasoning.
-- 📺 **High-DPI Support & UI Overhaul (v0.5.0):** Full support for 4K screens, extensive tooltips explaining every button and setting (like Echo Cancellation and Noise Threshold), and a beautifully animated multicolored "Working" indicator.
-- 🔍 **Dev Verbosity Toggle (v0.5.0):** Hide complex background CLI tasks and system notifications with a single click, keeping your chat log clean and focused purely on the conversation.
-- 🔇 **Perfect Echo Cancellation (Hard Ducking):** Zero-feedback audio stream stability.
-- 🧠 **Dynamic AI Steering & Memory:** Adjust AI personality on the fly, or use the **Memory Manager** button to recall and summarize all your persistently saved preferences and workflows.
-- 💻 **High Verbosity GUI:** See exactly what the AI is thinking and doing in the PyQt6 terminal logs, complete with an **Active MCPs** loaded list, a background task spinner, and a Power Level indicator.
-- 📝 **Persistent Local Logging:** Full Markdown conversation history in `logs/`.
+1. **Clone & Install:**
+   ```bash
+   git clone https://github.com/vhaloo/OmniGemini.git
+   cd OmniGemini
+   install_windows.bat
+   ```
+2. **Setup:** Open the **Settings** menu in the app and paste your **Gemini API Key**.
+3. **Connect:** Click **Connect Live API** and start talking!
 
----
-
-## 🚀 Installation
-
-We provide robust auto-install scripts to get you up and running in seconds on any platform.
-
-### Windows
-Double-click the `install_windows.bat` file, or run it from your terminal:
-```cmd
-.\install_windows.bat
-```
-
-### macOS & Linux
-Run the provided shell script:
-```bash
-chmod +x install_unix.sh
-./install_unix.sh
-```
-
----
-
-## 🔗 Integration with Gemini CLI
-OmniGemini acts as an intelligent voice frontend for the [Gemini CLI](https://github.com/google/gemini-cli). It expects the command `gemini` to be available in your system's PATH. 
-Whenever you ask for complex operations, OmniGemini runs `gemini --yolo --model gemini-3.1-flash "your task"` autonomously, utilizing all your loaded extensions and MCPs safely.
+Whenever you ask for complex operations, OmniGemini runs `gemini --yolo --model gemini-3.1-pro-preview "your task"` autonomously, utilizing all your loaded extensions and MCPs safely.
 
 ## ⚠️ Requirements
-- Python 3.10 or higher
-- A working Microphone and Speakers/Headphones
-- A valid Gemini API Key
+- Python 3.10+
+- A working Microphone and Speakers
+- A valid Gemini API Key (from Google AI Studio)
 
 ## License
 MIT License
