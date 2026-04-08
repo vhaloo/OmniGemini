@@ -321,7 +321,7 @@ class OmniAgent:
                                 model_choice = args.get("model", "gemini-3.1-flash-preview") if isinstance(args, dict) else getattr(args, "model", "gemini-3.1-flash-preview")
                                 
                                 if "pro" in model_choice.lower():
-                                    actual_model = "gemini-2.5-pro"
+                                    actual_model = "gemini-3.1-pro-preview"
                                 else:
                                     actual_model = "gemini-2.5-flash"
                                 

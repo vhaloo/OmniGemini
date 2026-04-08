@@ -51,20 +51,26 @@ class SettingsDialog(QDialog):
         
         self.api_key_input = QLineEdit(self.config.get("api_key", ""))
         self.api_key_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self.api_key_input.setToolTip("Your Gemini API key from Google AI Studio.")
         layout.addRow("Gemini API Key:", self.api_key_input)
         
         self.cli_path_input = QLineEdit(self.config.get("gemini_cli_path", "gemini"))
+        self.cli_path_input.setToolTip("Path to the Gemini CLI executable. Leave as 'gemini' if it is in your system PATH.")
         layout.addRow("Gemini CLI Path:", self.cli_path_input)
         
         self.camera_idx_input = QLineEdit(str(self.config.get("camera_index", 0)))
+        self.camera_idx_input.setToolTip("The index of your webcam (0 is usually the default, 1 is an external or secondary camera).")
         layout.addRow("Camera Index:", self.camera_idx_input)
         
         self.loudness_input = QLineEdit(str(self.config.get("loudness_threshold", 8000)))
+        self.loudness_input.setToolTip("Set the volume level required to trigger the microphone. Lower means more sensitive (picks up quiet sounds), higher means less sensitive (ignores background noise). Default is 8000.")
         layout.addRow("Loudness Threshold:", self.loudness_input)
         
         self.in_device_combo = QComboBox()
+        self.in_device_combo.setToolTip("Select your microphone.")
         self.in_device_combo.addItem("Default", None)
         self.out_device_combo = QComboBox()
+        self.out_device_combo.setToolTip("Select your speakers or headphones.")
         self.out_device_combo.addItem("Default", None)
         
         devices = sd.query_devices()
@@ -85,6 +91,7 @@ class SettingsDialog(QDialog):
         layout.addRow("Output Device:", self.out_device_combo)
         
         self.ducking_checkbox = QCheckBox("Enable Speaker Ducking (Echo Cancellation)")
+        self.ducking_checkbox.setToolTip("Echo Cancellation: Mutes the microphone feed momentarily while the AI is speaking so it doesn't hear itself and loop. Essential if not using headphones.")
         self.ducking_checkbox.setChecked(self.config.get("ducking_enabled", True))
         layout.addRow("", self.ducking_checkbox)
         
@@ -288,8 +295,10 @@ class MainWindow(QMainWindow):
         quick_prompt_layout = QHBoxLayout()
         quick_prompt_layout.setSpacing(10)
         explain_screen_btn = QPushButton("👀 Explain my Screen")
+        explain_screen_btn.setToolTip("Quickly ask OmniGemini to look at your screen and explain what's happening.")
         explain_screen_btn.clicked.connect(lambda: self.insert_prompt("Look at my screen and explain what's going on or what I'm working on."))
         summarize_day_btn = QPushButton("📅 Summarize Day")
+        summarize_day_btn.setToolTip("Quickly ask OmniGemini to summarize your emails and calendar events.")
         summarize_day_btn.clicked.connect(lambda: self.insert_prompt("Can you fetch my recent emails and calendar events and summarize my day?"))
         quick_prompt_layout.addWidget(explain_screen_btn)
         quick_prompt_layout.addWidget(summarize_day_btn)
@@ -304,6 +313,7 @@ class MainWindow(QMainWindow):
         self.text_input.returnPressed.connect(self.handle_text_submit)
         
         self.send_btn = QPushButton("Send")
+        self.send_btn.setToolTip("Send the typed message to OmniGemini.")
         self.send_btn.setStyleSheet("background-color: #89B4FA; color: #11111B; padding: 12px 24px; font-size: 14px;")
         self.send_btn.clicked.connect(self.handle_text_submit)
         
@@ -444,6 +454,10 @@ class MainWindow(QMainWindow):
         self.log_signal.emit(msg)
 
     def append_log(self, msg):
+        if not self.agent.config.get("verbose_logging", True):
+            if not ("[bold white]You" in msg or "[bold blue]Omni" in msg):
+                return
+                
         html_msg = rich_to_html(msg)
         self.log_area.append(html_msg)
         scrollbar = self.log_area.verticalScrollBar()

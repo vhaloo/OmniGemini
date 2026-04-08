@@ -10,7 +10,8 @@ DEFAULT_CONFIG = {
     "ducking_enabled": True,
     "loudness_threshold": 8000,
     "input_device": None,
-    "output_device": None
+    "output_device": None,
+    "verbose_logging": True
 }
 
 def load_config():
