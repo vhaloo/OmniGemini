@@ -147,11 +147,13 @@ class OmniAgent:
                 self.logger(f"[dim]Injecting Task {task_id} results into Live API context...[/dim]")
                 
                 # Safeguard against huge payloads and weird control characters causing WebSocket disconnects
-                clean_out = "".join(ch for ch in out if ch.isprintable() or ch in '\n\r\t')
-                if len(clean_out) > 3000:
-                    clean_out = "...[OUTPUT TRUNCATED]...\n" + clean_out[-3000:]
+                import re
+                # Only keep basic ASCII printable characters, newlines, and tabs
+                clean_out = re.sub(r'[^\x20-\x7E\n\r\t]', '', out)
+                if len(clean_out) > 600:
+                    clean_out = "...(truncated)...\n" + clean_out[-600:]
                     
-                notification = f"[SYSTEM NOTIFICATION: Background Task {task_id} Completed]\nOriginal Prompt: {prompt}\nResult Output:\n{clean_out}\n\nTask is complete. Please review the result and summarize the final outcome to the user out loud."
+                notification = f"Background Task {task_id} completed. Terminal output:\n{clean_out}\n\nPlease review and summarize the final outcome to the user out loud."
                 self.chat_history.append(f"System: Task {task_id} completed.")
                 try:
                     await self.session.send(input=notification, end_of_turn=True)
