@@ -146,7 +146,7 @@ class MainWindow(QMainWindow):
             QScrollBar::handle:vertical { background: #313244; min-height: 20px; border-radius: 5px; }
             QScrollBar::handle:vertical:hover { background: #45475A; }
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { border: none; background: none; }
-        ")
+        """)
         
         self.log_signal.connect(self.append_log)
         self.frame_signal.connect(self.update_vision_preview)
