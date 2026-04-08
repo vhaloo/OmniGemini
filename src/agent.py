@@ -75,15 +75,16 @@ class OmniAgent:
             "VERBOSITY MANDATE: When you receive the result from 'delegate_gemini', you MUST give a highly detailed, verbose verbal summary of exactly what the CLI did, what files it touched, or the contents of the emails it fetched. Do not just say 'it is done'. Explain the details."
         )
         self.steering_prompt = ""
+        self.chat_history = []
         self.on_frame_captured = None 
-        self.on_disconnect = None # Callback for GUI to reset state
-        self.on_working_state_changed = None # Callback for GUI spinner
-        self.auto_vision_active = False
 
     def _get_current_instruction(self):
         instr = self.base_instruction
         if self.steering_prompt:
             instr += f"\n\nUSER STEERING DIRECTIVES:\n{self.steering_prompt}"
+        if self.chat_history:
+            history_text = "\n".join(self.chat_history[-20:])
+            instr += f"\n\nPREVIOUS CONVERSATION HISTORY (You just reconnected. Resume naturally from here):\n{history_text}"
         return instr
 
     def _init_log(self):
@@ -197,11 +198,13 @@ class OmniAgent:
                             text = server_content.input_transcription.text
                             self.logger(f"[bold white]You:[/bold white] {text}")
                             self._append_log("User", text)
+                            self.chat_history.append(f"User: {text}")
                         
                         if server_content.output_transcription:
                             text = server_content.output_transcription.text
                             self.logger(f"[bold blue]Omni:[/bold blue] {text}")
                             self._append_log("Omni", text)
+                            self.chat_history.append(f"OmniGemini: {text}")
 
                         model_turn = server_content.model_turn
                         if model_turn:
@@ -240,9 +243,9 @@ class OmniAgent:
                                 model_choice = args.get("model", "gemini-3.1-flash-preview") if isinstance(args, dict) else getattr(args, "model", "gemini-3.1-flash-preview")
                                 
                                 if "pro" in model_choice.lower():
-                                    actual_model = "gemini-3.1-pro-preview"
+                                    actual_model = "gemini-2.5-pro"
                                 else:
-                                    actual_model = "gemini-3.1-flash-lite-preview"
+                                    actual_model = "gemini-2.5-flash"
                                 
                                 self.logger(f"[bold magenta]Tool:[/bold magenta] delegate_gemini\n[dim]Model: {actual_model}\nPrompt: {prompt}[/dim]")
                                 self._append_log("Tool Call", f"delegate_gemini [{actual_model}]: {prompt}")
@@ -348,11 +351,9 @@ class OmniAgent:
             
         self.logger(f"[bold white]You (Text):[/bold white] {text}")
         self._append_log("User (Text)", text)
+        self.chat_history.append(f"User: {text}")
         try:
-            await self.session.send_client_content(
-                turns=[{"role": "user", "parts": [{"text": text}]}],
-                turn_complete=True
-            )
+            await self.session.send(input=text, end_of_turn=True)
         except Exception as e:
             self.logger(f"[red]Failed to send text: {e}[/red]")
 
@@ -384,10 +385,8 @@ class OmniAgent:
                 self.logger(f"[bold blue]Sending {source.capitalize()} frame[/bold blue] ({len(frame_bytes)} bytes) as context...")
             self._append_log("Vision", f"Sent {source} frame context.")
             try:
-                await self.session.send_client_content(
-                    turns=[{"role": "user", "parts": [{"inline_data": {"mime_type": "image/jpeg", "data": frame_bytes}}]}],
-                    turn_complete=True
-                )
+                part = types.Part.from_bytes(data=frame_bytes, mime_type="image/jpeg")
+                await self.session.send(input=part, end_of_turn=True)
                 if not silent:
                     self.logger("[green]Frame sent successfully.[/green]")
             except Exception as e:
