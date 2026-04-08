@@ -247,11 +247,18 @@ class MainWindow(QMainWindow):
         
         self.clear_log_btn = QPushButton("🗑 Clear Log")
         self.clear_log_btn.clicked.connect(self.clear_logger)
+        
+        self.verbose_checkbox = QCheckBox("Dev Verbose")
+        self.verbose_checkbox.setChecked(self.agent.config.get("verbose_logging", True))
+        self.verbose_checkbox.setToolTip("Toggle super verbose system logs. If off, only shows oral input and output.")
+        self.verbose_checkbox.setStyleSheet("color: #BAC2DE; font-weight: bold; margin-left: 10px;")
+        self.verbose_checkbox.stateChanged.connect(self.toggle_verbose_logging)
 
         action_toolbar.addWidget(self.connect_btn)
         action_toolbar.addWidget(self.memory_btn)
         action_toolbar.addWidget(self.settings_btn)
         action_toolbar.addWidget(self.clear_log_btn)
+        action_toolbar.addWidget(self.verbose_checkbox)
         action_toolbar.addStretch()
         
         self.zoom_out_btn = QPushButton("A-")
@@ -398,14 +405,10 @@ class MainWindow(QMainWindow):
         self.text_input.setFocus()
 
     def zoom_in_log(self):
-        font = self.log_area.font()
-        font.setPointSize(font.pointSize() + 1)
-        self.log_area.setFont(font)
+        self.log_area.zoomIn(1)
 
     def zoom_out_log(self):
-        font = self.log_area.font()
-        font.setPointSize(max(6, font.pointSize() - 1))
-        self.log_area.setFont(font)
+        self.log_area.zoomOut(1)
         
     def clear_logger(self):
         self.log_area.clear()
