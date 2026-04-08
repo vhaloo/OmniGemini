@@ -392,7 +392,7 @@ class OmniAgent:
         self._append_log("User (Text)", text)
         self.chat_history.append(f"User: {text}")
         try:
-            await self.session.send(input=text, end_of_turn=True)
+            await self.session.send_client_content(turns={"role": "user", "parts": [{"text": text}]}, turn_complete=True)
         except Exception as e:
             self.logger(f"[red]Failed to send text: {e}[/red]")
 
