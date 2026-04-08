@@ -6,7 +6,7 @@ import sounddevice as sd
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QPushButton, QTextEdit, QLineEdit, QCheckBox, 
                              QFormLayout, QDialog, QDialogButtonBox, QLabel, QSplitter, QProgressBar, QComboBox, QFrame)
-from PyQt6.QtGui import QPixmap, QImage, QFont, QIcon
+from PyQt6.QtGui import QPixmap, QImage, QFont, QIcon, QColor, QPalette
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSize
 from rich.console import Console
 from src.config import save_config
@@ -124,7 +124,7 @@ class MainWindow(QMainWindow):
     def __init__(self, agent):
         super().__init__()
         self.agent = agent
-        self.setWindowTitle("OmniGemini - Live Desktop Assistant v0.3.0")
+        self.setWindowTitle("OmniGemini - Live Desktop Assistant v0.4.0")
         self.resize(1400, 900)
         self.setStyleSheet("""
             QMainWindow { background-color: #11111B; color: #CDD6F4; font-family: 'Segoe UI', sans-serif; }
@@ -146,7 +146,7 @@ class MainWindow(QMainWindow):
             QScrollBar::handle:vertical { background: #313244; min-height: 20px; border-radius: 5px; }
             QScrollBar::handle:vertical:hover { background: #45475A; }
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { border: none; background: none; }
-        """)
+        ")
         
         self.log_signal.connect(self.append_log)
         self.frame_signal.connect(self.update_vision_preview)
@@ -181,7 +181,7 @@ class MainWindow(QMainWindow):
         header_title.setStyleSheet("font-size: 20px; font-weight: 800; color: #89B4FA; letter-spacing: 0.5px;")
         header_layout.addWidget(header_title)
         
-        version_lbl = QLabel("v0.3.0")
+        version_lbl = QLabel("v0.4.0")
         version_lbl.setStyleSheet("color: #6C7086; font-size: 12px; font-weight: bold; margin-top: 6px; margin-left: 5px;")
         header_layout.addWidget(version_lbl)
         
@@ -193,9 +193,8 @@ class MainWindow(QMainWindow):
         
         header_layout.addStretch()
         
-        self.working_lbl = QLabel("⚙️ WORKING")
-        self.working_lbl.setStyleSheet("color: #F9E2AF; font-weight: bold; font-size: 13px; background-color: #313244; padding: 4px 12px; border-radius: 12px; margin-right: 15px;")
-        self.working_lbl.setVisible(False)
+        self.working_lbl = QLabel("⚙️ STANDBY")
+        self.working_lbl.setStyleSheet("color: #A6ADC8; font-weight: bold; font-size: 13px; background-color: #313244; padding: 6px 16px; border-radius: 12px; margin-right: 15px; border: 1px solid #45475A;")
         header_layout.addWidget(self.working_lbl)
         
         try:
@@ -239,10 +238,29 @@ class MainWindow(QMainWindow):
         self.settings_btn = QPushButton("⚙ Settings")
         self.settings_btn.clicked.connect(self.open_settings)
         
+        self.clear_log_btn = QPushButton("🗑 Clear Log")
+        self.clear_log_btn.clicked.connect(self.clear_logger)
+
         action_toolbar.addWidget(self.connect_btn)
         action_toolbar.addWidget(self.memory_btn)
         action_toolbar.addWidget(self.settings_btn)
+        action_toolbar.addWidget(self.clear_log_btn)
         action_toolbar.addStretch()
+        
+        self.zoom_out_btn = QPushButton("A-")
+        self.zoom_out_btn.setToolTip("Decrease Log Font Size")
+        self.zoom_out_btn.setStyleSheet("padding: 4px 10px; font-weight: bold;")
+        self.zoom_out_btn.clicked.connect(self.zoom_out_log)
+        
+        self.zoom_in_btn = QPushButton("A+")
+        self.zoom_in_btn.setToolTip("Increase Log Font Size")
+        self.zoom_in_btn.setStyleSheet("padding: 4px 10px; font-weight: bold;")
+        self.zoom_in_btn.clicked.connect(self.zoom_in_log)
+        
+        action_toolbar.addWidget(self.zoom_out_btn)
+        action_toolbar.addWidget(self.zoom_in_btn)
+        
+        action_toolbar.addSpacing(15)
         
         mic_lbl = QLabel("🎤 Mic:")
         mic_lbl.setStyleSheet("color: #A6ADC8; font-weight: bold; font-size: 12px;")
@@ -260,8 +278,24 @@ class MainWindow(QMainWindow):
         self.log_area = QTextEdit()
         self.log_area.setReadOnly(True)
         self.log_area.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
+        # default font for log area
+        log_font = self.log_area.font()
+        log_font.setPointSize(10)
+        self.log_area.setFont(log_font)
         left_layout.addWidget(self.log_area)
         
+        # Shortcuts for quick instructions
+        quick_prompt_layout = QHBoxLayout()
+        quick_prompt_layout.setSpacing(10)
+        explain_screen_btn = QPushButton("👀 Explain my Screen")
+        explain_screen_btn.clicked.connect(lambda: self.insert_prompt("Look at my screen and explain what's going on or what I'm working on."))
+        summarize_day_btn = QPushButton("📅 Summarize Day")
+        summarize_day_btn.clicked.connect(lambda: self.insert_prompt("Can you fetch my recent emails and calendar events and summarize my day?"))
+        quick_prompt_layout.addWidget(explain_screen_btn)
+        quick_prompt_layout.addWidget(summarize_day_btn)
+        quick_prompt_layout.addStretch()
+        left_layout.addLayout(quick_prompt_layout)
+
         # Input Area
         input_layout = QHBoxLayout()
         input_layout.setSpacing(10)
@@ -290,7 +324,7 @@ class MainWindow(QMainWindow):
         vision_title.setStyleSheet("font-weight: 800; color: #BAC2DE; font-size: 12px; letter-spacing: 1.5px;")
         right_layout.addWidget(vision_title)
         
-        self.vision_preview = QLabel("No context shared yet.")
+        self.vision_preview = QLabel("No context shared yet.\nWebcam and Screen captures will appear here.")
         self.vision_preview.setStyleSheet("background-color: #11111B; border: 1px solid #313244; color: #6C7086; border-radius: 8px;")
         self.vision_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.vision_preview.setFixedHeight(220)
@@ -328,17 +362,17 @@ class MainWindow(QMainWindow):
         right_layout.addWidget(steering_title)
         
         self.steering_text = QTextEdit()
-        self.steering_text.setPlaceholderText("Enter overriding instructions or personality traits here...")
+        self.steering_text.setPlaceholderText("Enter overriding instructions or personality traits here...\nExample: \"You are a grumpy robot. Only speak French.\"")
         self.steering_text.setStyleSheet("border: 1px solid #45475A;")
         self.steering_text.textChanged.connect(self.update_steering)
         right_layout.addWidget(self.steering_text)
         
-        steering_help = QLabel("Applied on next connection.")
+        steering_help = QLabel("Changes to directives apply immediately on next message.")
         steering_help.setStyleSheet("color: #6C7086; font-size: 11px; font-style: italic;")
         right_layout.addWidget(steering_help)
         
         splitter.addWidget(right_panel)
-        splitter.setSizes([850, 400]) # Give more space to the left side
+        splitter.setSizes([900, 350]) # Give more space to the left side
         
         self.agent.logger = self.log_message
         self.log_message("[dim]Welcome to OmniGemini. Fetching system readiness...[/dim]")
@@ -349,8 +383,28 @@ class MainWindow(QMainWindow):
         except RuntimeError:
             pass
 
+    def insert_prompt(self, text):
+        self.text_input.setText(text)
+        self.text_input.setFocus()
+
+    def zoom_in_log(self):
+        font = self.log_area.font()
+        font.setPointSize(font.pointSize() + 1)
+        self.log_area.setFont(font)
+
+    def zoom_out_log(self):
+        font = self.log_area.font()
+        font.setPointSize(max(6, font.pointSize() - 1))
+        self.log_area.setFont(font)
+        
+    def clear_logger(self):
+        self.log_area.clear()
+
     def animate_working(self):
         self.working_dots = (self.working_dots + 1) % 4
+        color = "#F9E2AF" if self.working_dots % 2 == 0 else "#F38BA8"
+        bg_color = "#45475A" if self.working_dots % 2 == 0 else "#585B70"
+        self.working_lbl.setStyleSheet(f"color: {color}; font-weight: 900; font-size: 14px; background-color: {bg_color}; padding: 6px 16px; border-radius: 12px; margin-right: 15px; border: 1px solid {color};")
         self.working_lbl.setText(f"⚙️ WORKING{'.' * self.working_dots}")
 
     async def fetch_mcps_and_warmup(self):
@@ -436,12 +490,12 @@ class MainWindow(QMainWindow):
             
     def toggle_working_indicator(self, is_working):
         if is_working:
-            self.working_lbl.setText("⚙️ WORKING")
+            self.working_timer.start(300)
             self.working_lbl.setVisible(True)
-            self.working_timer.start(400)
         else:
             self.working_timer.stop()
-            self.working_lbl.setVisible(False)
+            self.working_lbl.setStyleSheet("color: #A6ADC8; font-weight: bold; font-size: 13px; background-color: #313244; padding: 6px 16px; border-radius: 12px; margin-right: 15px; border: 1px solid #45475A;")
+            self.working_lbl.setText("⚙️ STANDBY")
 
     def open_settings(self):
         dlg = SettingsDialog(self.agent.config, self)
