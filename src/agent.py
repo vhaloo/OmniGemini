@@ -145,7 +145,13 @@ class OmniAgent:
             # Send notification back to the Live Session
             if self.session and self.running:
                 self.logger(f"[dim]Injecting Task {task_id} results into Live API context...[/dim]")
-                notification = f"[SYSTEM NOTIFICATION: Background Task {task_id} Completed]\nOriginal Prompt: {prompt}\nResult Output:\n{out}\n\nTask is complete. Please review the result and summarize the final outcome to the user out loud."
+                
+                # Safeguard against huge payloads and weird control characters causing WebSocket disconnects
+                clean_out = "".join(ch for ch in out if ch.isprintable() or ch in '\n\r\t')
+                if len(clean_out) > 3000:
+                    clean_out = "...[OUTPUT TRUNCATED]...\n" + clean_out[-3000:]
+                    
+                notification = f"[SYSTEM NOTIFICATION: Background Task {task_id} Completed]\nOriginal Prompt: {prompt}\nResult Output:\n{clean_out}\n\nTask is complete. Please review the result and summarize the final outcome to the user out loud."
                 self.chat_history.append(f"System: Task {task_id} completed.")
                 try:
                     await self.session.send(input=notification, end_of_turn=True)
@@ -319,6 +325,9 @@ class OmniAgent:
                             elif fc.name == "delegate_gemini":
                                 prompt = args.get("prompt") if isinstance(args, dict) else getattr(args, "prompt", str(args))
                                 model_choice = args.get("model", "gemini-3.1-flash-preview") if isinstance(args, dict) else getattr(args, "model", "gemini-3.1-flash-preview")
+                                
+                                # Add non-interactive safety constraint to the prompt
+                                prompt += "\n\nCRITICAL CONSTRAINTS FOR YOU (THE BACKGROUND AGENT): You are running headlessly in YOLO mode. DO NOT use interactive shell commands that wait for input (e.g., vim, ssh, or interactive node/python scripts). NEVER stall by opening a shell you don't act upon. Use non-interactive flags."
                                 
                                 if "pro" in model_choice.lower():
                                     actual_model = "gemini-3.1-pro-preview"
