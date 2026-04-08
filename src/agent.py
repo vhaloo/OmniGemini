@@ -240,9 +240,9 @@ class OmniAgent:
                                 model_choice = args.get("model", "gemini-3.1-flash-preview") if isinstance(args, dict) else getattr(args, "model", "gemini-3.1-flash-preview")
                                 
                                 if "pro" in model_choice.lower():
-                                    actual_model = "gemini-3-pro-preview"
+                                    actual_model = "gemini-3.1-pro-preview"
                                 else:
-                                    actual_model = "gemini-2.5-flash"
+                                    actual_model = "gemini-3.1-flash-lite-preview"
                                 
                                 self.logger(f"[bold magenta]Tool:[/bold magenta] delegate_gemini\n[dim]Model: {actual_model}\nPrompt: {prompt}[/dim]")
                                 self._append_log("Tool Call", f"delegate_gemini [{actual_model}]: {prompt}")
