@@ -63,7 +63,7 @@ chmod +x install_unix.sh
 
 ## 🔗 Integration with Gemini CLI
 OmniGemini acts as an intelligent voice frontend for the [Gemini CLI](https://github.com/google/gemini-cli). It expects the command `gemini` to be available in your system's PATH. 
-Whenever you ask for complex operations, OmniGemini runs `gemini --yolo --model gemini-2.5-flash "your task"` autonomously, utilizing all your loaded extensions and MCPs safely.
+Whenever you ask for complex operations, OmniGemini runs `gemini --yolo --model gemini-3.1-flash "your task"` autonomously, utilizing all your loaded extensions and MCPs safely.
 
 ## ⚠️ Requirements
 - Python 3.10 or higher
