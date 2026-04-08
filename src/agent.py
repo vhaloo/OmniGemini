@@ -76,6 +76,7 @@ class OmniAgent:
         )
         self.steering_prompt = ""
         self.chat_history = []
+        self.active_background_tasks = 0
         self.on_frame_captured = None 
 
     def _get_current_instruction(self):
@@ -86,6 +87,83 @@ class OmniAgent:
             history_text = "\n".join(self.chat_history[-20:])
             instr += f"\n\nPREVIOUS CONVERSATION HISTORY (You just reconnected. Resume naturally from here):\n{history_text}"
         return instr
+
+    async def _run_background_cli(self, task_id, actual_model, prompt):
+        self.active_background_tasks += 1
+        if self.on_working_state_changed:
+            self.on_working_state_changed(True)
+            
+        self.logger(f"[bold magenta]Background Task [{task_id}]:[/bold magenta] Starting {actual_model}\n[dim]Prompt: {prompt}[/dim]")
+        self._append_log("Background Task", f"Started {task_id} [{actual_model}]: {prompt}")
+        
+        cli_path = self.config.get("gemini_cli_path", "gemini")
+        try:
+            import shutil
+            import time
+            resolved_path = shutil.which(cli_path)
+            if not resolved_path:
+                resolved_path = cli_path
+                
+            args_list = [resolved_path, "--yolo", "--model", actual_model, "--include-directories", "C:\\", "-p", prompt]
+            cmd_str = subprocess.list2cmdline(args_list)
+            
+            creation_flags = 0
+            if os.name == 'nt':
+                creation_flags = subprocess.CREATE_NO_WINDOW
+                
+            process = await asyncio.create_subprocess_shell(
+                cmd_str,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+                stdin=subprocess.DEVNULL,
+                creationflags=creation_flags
+            )
+            
+            out_chunks = []
+            while True:
+                line = await process.stdout.readline()
+                if not line:
+                    break
+                decoded_line = line.decode('utf-8', errors='replace')
+                out_chunks.append(decoded_line)
+                self.logger(f"[dim][CLI {task_id}][/dim] {decoded_line.strip()}")
+                
+                # Prevent memory explosion if output is insane
+                if len(out_chunks) > 2000:
+                    out_chunks.append("\n...[OUTPUT TRUNCATED]...")
+                    process.terminate()
+                    break
+                
+            await process.wait()
+            out = "".join(out_chunks)
+            
+            if process.returncode != 0:
+                self.logger(f"[red]Task {task_id} Failed (Code {process.returncode}).[/red]")
+            else:
+                self.logger(f"[green]Task {task_id} Finished.[/green]")
+                
+            # Send notification back to the Live Session
+            if self.session and self.running:
+                self.logger(f"[dim]Injecting Task {task_id} results into Live API context...[/dim]")
+                notification = f"[SYSTEM NOTIFICATION: Background Task {task_id} Completed]\nOriginal Prompt: {prompt}\nResult Output:\n{out}\n\nTask is complete. Please review the result and summarize the final outcome to the user out loud."
+                self.chat_history.append(f"System: Task {task_id} completed.")
+                try:
+                    await self.session.send(input=notification, end_of_turn=True)
+                except Exception as e:
+                    self.logger(f"[red]Failed to send task result to session: {e}[/red]")
+                    
+        except Exception as e:
+            out = f"Failed to run Gemini CLI: {e}"
+            self.logger(f"[red]{out}[/red]")
+            if self.session and self.running:
+                try:
+                    await self.session.send(input=f"[SYSTEM NOTIFICATION: Background Task {task_id} FAILED]\nError: {e}", end_of_turn=True)
+                except:
+                    pass
+        finally:
+            self.active_background_tasks -= 1
+            if self.on_working_state_changed and self.active_background_tasks <= 0:
+                self.on_working_state_changed(False)
 
     def _init_log(self):
         if not os.path.exists("logs"):
@@ -247,64 +325,14 @@ class OmniAgent:
                                 else:
                                     actual_model = "gemini-2.5-flash"
                                 
-                                self.logger(f"[bold magenta]Tool:[/bold magenta] delegate_gemini\n[dim]Model: {actual_model}\nPrompt: {prompt}[/dim]")
-                                self._append_log("Tool Call", f"delegate_gemini [{actual_model}]: {prompt}")
+                                task_id = f"task_{int(datetime.now().timestamp())}"
                                 
-                                cli_path = self.config.get("gemini_cli_path", "gemini")
-                                try:
-                                    if self.on_working_state_changed:
-                                        self.on_working_state_changed(True)
-                                        
-                                    self.logger(f"[dim]Gemini CLI is running synchronously with {actual_model}...[/dim]")
-                                    
-                                    resolved_path = shutil.which(cli_path)
-                                    if not resolved_path:
-                                        resolved_path = cli_path
-                                        
-                                    args_list = [resolved_path, "--yolo", "--model", actual_model, "--include-directories", "C:\\", "-p", prompt]
-                                    
-                                    cmd_str = subprocess.list2cmdline(args_list)
-                                    
-                                    creation_flags = 0
-                                    if os.name == 'nt':
-                                        creation_flags = subprocess.CREATE_NO_WINDOW
-                                        
-                                    process = await asyncio.create_subprocess_shell(
-                                        cmd_str,
-                                        stdout=asyncio.subprocess.PIPE,
-                                        stderr=asyncio.subprocess.STDOUT,
-                                        stdin=subprocess.DEVNULL,
-                                        creationflags=creation_flags
-                                    )
-                                    
-                                    out_chunks = []
-                                    while True:
-                                        line = await process.stdout.readline()
-                                        if not line:
-                                            break
-                                        decoded_line = line.decode('utf-8', errors='replace')
-                                        out_chunks.append(decoded_line)
-                                        self.logger(f"[dim][CLI][/dim] {decoded_line.strip()}")
-                                        
-                                        # Prevent memory explosion if output is insane
-                                        if len(out_chunks) > 2000:
-                                            out_chunks.append("\n...[OUTPUT TRUNCATED]...")
-                                            process.terminate()
-                                            break
-                                        
-                                    await process.wait()
-                                    out = "".join(out_chunks)
-                                    
-                                    if process.returncode != 0:
-                                        self.logger(f"[red]Gemini CLI Failed (Code {process.returncode}).[/red]")
-                                    else:
-                                        self.logger(f"[green]Gemini CLI Finished.[/green]")
-                                except Exception as e:
-                                    out = f"Failed to run Gemini CLI: {e}"
-                                    self.logger(f"[red]{out}[/red]")
-                                finally:
-                                    if self.on_working_state_changed:
-                                        self.on_working_state_changed(False)
+                                # Start the background task without blocking the receive loop
+                                asyncio.create_task(self._run_background_cli(task_id, actual_model, prompt))
+                                
+                                out = f"Background task {task_id} started successfully. You MUST now continue conversing with the user while it runs. Tell them you are working on it and explain what's happening technically. Do not wait in silence."
+                                self.logger(f"[bold magenta]Tool:[/bold magenta] delegate_gemini\n[dim]Model: {actual_model}\nPrompt: {prompt}\nStatus: Pushed to background.[/dim]")
+                                self._append_log("Tool Call", f"delegate_gemini [{actual_model}]: {prompt}")
                                     
                             elif fc.name == "capture_screen":
                                 monitor_idx = args.get("monitor_index", 0) if isinstance(args, dict) else getattr(args, "monitor_index", 0)
