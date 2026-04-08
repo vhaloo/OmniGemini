@@ -32,7 +32,7 @@ The easiest way to get started is to download the auto-installer bundle for your
   - **Full System Power (No Sandbox):** OmniGemini explicitly disables workspace sandboxing when delegating tasks, giving the AI complete freedom to read, modify, or create files anywhere on your hard drive (especially powerful when launched in Admin mode).
   - **Gmail & Workspace:** Ask OmniGemini to "read my last 5 emails" or "send an email to boss@example.com". It will delegate the task to the Google Workspace MCP securely.
   - **File Operations:** Create, modify, or analyze files (including Excel, PDF, code) based on voice or vision.
-  - **Model Choice:** Automatically uses **Gemini 2.5 Flash** for speed or **Gemini 3.1 Pro** for deep reasoning.
+  - **Model Choice:** Automatically uses **Gemini 2.5 Flash** for speed or **Gemini 2.5 Pro** for deep reasoning.
 - 📺 **High-DPI Support & UI Overhaul (v0.5.0):** Full support for 4K screens, extensive tooltips explaining every button and setting (like Echo Cancellation and Noise Threshold), and a beautifully animated multicolored "Working" indicator.
 - 🔍 **Dev Verbosity Toggle (v0.5.0):** Hide complex background CLI tasks and system notifications with a single click, keeping your chat log clean and focused purely on the conversation.
 - 🔇 **Perfect Echo Cancellation (Hard Ducking):** Zero-feedback audio stream stability.

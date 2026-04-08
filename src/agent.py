@@ -321,9 +321,9 @@ class OmniAgent:
                                 model_choice = args.get("model", "gemini-3.1-flash-preview") if isinstance(args, dict) else getattr(args, "model", "gemini-3.1-flash-preview")
                                 
                                 if "pro" in model_choice.lower():
-                                    actual_model = "gemini-3.1-pro-preview"
+                                    actual_model = "gemini-2.5-pro"
                                 else:
-                                    actual_model = "gemini-3.1-flash"
+                                    actual_model = "gemini-2.5-flash"
                                 
                                 task_id = f"task_{int(datetime.now().timestamp())}"
                                 
