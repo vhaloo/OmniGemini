@@ -404,11 +404,27 @@ class MainWindow(QMainWindow):
         self.text_input.setText(text)
         self.text_input.setFocus()
 
+    def toggle_verbose_logging(self, state):
+        self.agent.config["verbose_logging"] = bool(state)
+        save_config(self.agent.config)
+
     def zoom_in_log(self):
-        self.log_area.zoomIn(1)
+        if not hasattr(self, 'current_font_size'):
+            self.current_font_size = 10
+        self.current_font_size += 1
+        self._apply_log_font()
 
     def zoom_out_log(self):
-        self.log_area.zoomOut(1)
+        if not hasattr(self, 'current_font_size'):
+            self.current_font_size = 10
+        self.current_font_size = max(6, self.current_font_size - 1)
+        self._apply_log_font()
+        
+    def _apply_log_font(self):
+        font = self.log_area.font()
+        font.setPointSize(self.current_font_size)
+        self.log_area.setFont(font)
+        self.log_area.document().setDefaultFont(font)
         
     def clear_logger(self):
         self.log_area.clear()
