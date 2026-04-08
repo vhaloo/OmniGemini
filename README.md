@@ -1,6 +1,6 @@
 # OmniGemini
 
-![OmniGemini Logo](https://img.shields.io/badge/OmniGemini-v0.2.0-blue?style=for-the-badge&logo=google)
+![OmniGemini Logo](https://img.shields.io/badge/OmniGemini-v0.3.0-blue?style=for-the-badge&logo=google)
 
 The Ultimate Live Desktop Assistant powered by Google's **Gemini 3.1 Flash Live Preview** and **Gemini 3.1 Pro/Flash**.
 
