@@ -144,8 +144,7 @@ class OmniAgent:
                 # Sanitize for WebSocket safety
                 clean_out = re.sub(r'[^\x20-\x7E\n\r\t]', '', out)
                 if len(clean_out) > 800:
-                    clean_out = "...(truncated)...
-" + clean_out[-800:]
+                    clean_out = "...(truncated)...\n" + clean_out[-800:]
                     
                 notification = f"Background Task {task_id} completed. Terminal output:\n{clean_out}\n\nPlease review and summarize the final outcome to the user out loud."
                 self.chat_history.append(f"System: Task {task_id} completed.")
