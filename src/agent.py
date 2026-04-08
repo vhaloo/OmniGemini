@@ -240,9 +240,9 @@ class OmniAgent:
                                 model_choice = args.get("model", "gemini-3.1-flash-preview") if isinstance(args, dict) else getattr(args, "model", "gemini-3.1-flash-preview")
                                 
                                 if "pro" in model_choice.lower():
-                                    actual_model = "gemini-2.5-pro"
+                                    actual_model = "gemini-3-pro-preview"
                                 else:
-                                    actual_model = "gemini-3.1-flash-preview"
+                                    actual_model = "gemini-2.5-flash"
                                 
                                 self.logger(f"[bold magenta]Tool:[/bold magenta] delegate_gemini\n[dim]Model: {actual_model}\nPrompt: {prompt}[/dim]")
                                 self._append_log("Tool Call", f"delegate_gemini [{actual_model}]: {prompt}")
@@ -292,7 +292,10 @@ class OmniAgent:
                                     await process.wait()
                                     out = "".join(out_chunks)
                                     
-                                    self.logger(f"[green]Gemini CLI Finished.[/green]")
+                                    if process.returncode != 0:
+                                        self.logger(f"[red]Gemini CLI Failed (Code {process.returncode}).[/red]")
+                                    else:
+                                        self.logger(f"[green]Gemini CLI Finished.[/green]")
                                 except Exception as e:
                                     out = f"Failed to run Gemini CLI: {e}"
                                     self.logger(f"[red]{out}[/red]")

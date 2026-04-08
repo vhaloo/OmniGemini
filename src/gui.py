@@ -124,7 +124,7 @@ class MainWindow(QMainWindow):
     def __init__(self, agent):
         super().__init__()
         self.agent = agent
-        self.setWindowTitle("OmniGemini - Live Desktop Assistant v0.1.9")
+        self.setWindowTitle("OmniGemini - Live Desktop Assistant v0.2.0")
         self.resize(1300, 850)
         self.setStyleSheet("""
             QMainWindow { background-color: #1E1E2E; color: #CDD6F4; font-family: 'Segoe UI', sans-serif; }
