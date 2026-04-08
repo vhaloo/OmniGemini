@@ -8,7 +8,7 @@ from google.genai import types
 from src.audio import AudioController
 from src.vision import VisionController
 
-MODEL = "gemini-3.1-flash-live-preview"
+MODEL = "gemini-2.5-flash-native-audio-preview-12-2025"
 
 class OmniAgent:
     def __init__(self, config, logger):
@@ -425,7 +425,7 @@ class OmniAgent:
             self._append_log("Vision", f"Sent {source} frame context.")
             try:
                 part = types.Part.from_bytes(data=frame_bytes, mime_type="image/jpeg")
-                await self.session.send(input=part, end_of_turn=True)
+                await self.session.send_client_content(turns={"role": "user", "parts": [part]}, turn_complete=True)
                 if not silent:
                     self.logger("[green]Frame sent successfully.[/green]")
             except Exception as e:
