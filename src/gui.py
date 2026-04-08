@@ -1,30 +1,35 @@
 import asyncio
 import ctypes
 import os
+import re
 import sounddevice as sd
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QPushButton, QTextEdit, QLineEdit, QCheckBox, 
                              QFormLayout, QDialog, QDialogButtonBox, QLabel, QSplitter, QProgressBar, QComboBox)
-from PyQt6.QtGui import QPixmap, QImage
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QPixmap, QImage, QFont
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from rich.console import Console
 from src.config import save_config
 
-# Dummy rich console to parse colors to simple HTML
 console = Console(force_terminal=False)
 
 def rich_to_html(rich_text):
-    # Extremely basic conversion for known tags
-    text = rich_text.replace("[bold green]", "<b style='color: #4CAF50'>").replace("[/bold green]", "</b>")
-    text = text.replace("[green]", "<span style='color: #4CAF50'>").replace("[/green]", "</span>")
-    text = text.replace("[bold red]", "<b style='color: #F44336'>").replace("[/bold red]", "</b>")
-    text = text.replace("[red]", "<span style='color: #F44336'>").replace("[/red]", "</span>")
-    text = text.replace("[bold blue]", "<b style='color: #2196F3'>").replace("[/bold blue]", "</b>")
-    text = text.replace("[bold cyan]", "<b style='color: #00BCD4'>").replace("[/bold cyan]", "</b>")
-    text = text.replace("[bold magenta]", "<b style='color: #9C27B0'>").replace("[/bold magenta]", "</b>")
-    text = text.replace("[bold white]", "<b style='color: #FFFFFF'>").replace("[/bold white]", "</b>")
-    text = text.replace("[yellow]", "<span style='color: #FFEB3B'>").replace("[/yellow]", "</span>")
-    text = text.replace("[dim]", "<span style='color: #888888'>").replace("[/dim]", "</span>")
+    text = rich_text.replace("[bold green]", "<b style='color: #A6E3A1'>").replace("[/bold green]", "</b>")
+    text = text.replace("[green]", "<span style='color: #A6E3A1'>").replace("[/green]", "</span>")
+    text = text.replace("[bold red]", "<b style='color: #F38BA8'>").replace("[/bold red]", "</b>")
+    text = text.replace("[red]", "<span style='color: #F38BA8'>").replace("[/red]", "</span>")
+    text = text.replace("[bold blue]", "<b style='color: #89B4FA'>").replace("[/bold blue]", "</b>")
+    text = text.replace("[bold cyan]", "<b style='color: #89DCEB'>").replace("[/bold cyan]", "</b>")
+    text = text.replace("[bold magenta]", "<b style='color: #CBA6F7'>").replace("[/bold magenta]", "</b>")
+    text = text.replace("[bold white]", "<b style='color: #CDD6F4'>").replace("[/bold white]", "</b>")
+    text = text.replace("[yellow]", "<span style='color: #F9E2AF'>").replace("[/yellow]", "</span>")
+    text = text.replace("[dim]", "<span style='color: #6C7086'>").replace("[/dim]", "</span>")
+    
+    # Basic Markdown
+    text = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', text)
+    text = re.sub(r'\*(.+?)\*', r'<i>\1</i>', text)
+    text = re.sub(r'`(.+?)`', r'<code style="background-color:#313244; padding:2px 4px; border-radius:4px;">\1</code>', text)
+    
     return text.replace("\n", "<br>")
 
 class SettingsDialog(QDialog):
@@ -33,6 +38,14 @@ class SettingsDialog(QDialog):
         self.setWindowTitle("OmniGemini Settings")
         self.setMinimumWidth(500)
         self.config = config
+        self.setStyleSheet("""
+            QDialog { background-color: #1E1E2E; color: #CDD6F4; font-family: 'Segoe UI', sans-serif; }
+            QLineEdit { background-color: #181825; color: #CDD6F4; border: 1px solid #313244; border-radius: 4px; padding: 5px; }
+            QComboBox { background-color: #181825; color: #CDD6F4; border: 1px solid #313244; border-radius: 4px; padding: 5px; }
+            QPushButton { background-color: #313244; color: #CDD6F4; border-radius: 4px; padding: 6px 12px; border: none; }
+            QPushButton:hover { background-color: #45475A; }
+            QLabel { color: #CDD6F4; }
+        """)
         
         layout = QFormLayout(self)
         
@@ -49,7 +62,6 @@ class SettingsDialog(QDialog):
         self.loudness_input = QLineEdit(str(self.config.get("loudness_threshold", 8000)))
         layout.addRow("Interruption Loudness Threshold:", self.loudness_input)
         
-        # Audio Devices
         self.in_device_combo = QComboBox()
         self.in_device_combo.addItem("Default", None)
         self.out_device_combo = QComboBox()
@@ -112,9 +124,19 @@ class MainWindow(QMainWindow):
     def __init__(self, agent):
         super().__init__()
         self.agent = agent
-        self.setWindowTitle("OmniGemini - Live Desktop Assistant")
+        self.setWindowTitle("OmniGemini - Live Desktop Assistant v0.1.9")
         self.resize(1300, 850)
-        self.setStyleSheet("background-color: #121212; color: #FFFFFF;")
+        self.setStyleSheet("""
+            QMainWindow { background-color: #1E1E2E; color: #CDD6F4; font-family: 'Segoe UI', sans-serif; }
+            QPushButton { background-color: #313244; color: #CDD6F4; border-radius: 6px; padding: 10px; font-weight: bold; border: 1px solid #45475A; }
+            QPushButton:hover { background-color: #45475A; }
+            QPushButton:pressed { background-color: #585B70; }
+            QTextEdit, QLineEdit { background-color: #181825; color: #CDD6F4; border-radius: 6px; border: 1px solid #313244; padding: 10px; font-family: 'Consolas', monospace; font-size: 13px; }
+            QLabel { color: #CDD6F4; }
+            QProgressBar { border: 1px solid #313244; border-radius: 4px; background-color: #181825; text-align: center; }
+            QProgressBar::chunk { background-color: #A6E3A1; border-radius: 3px; }
+            QSplitter::handle { background-color: #313244; width: 2px; }
+        """)
         
         self.log_signal.connect(self.append_log)
         self.frame_signal.connect(self.update_vision_preview)
@@ -127,18 +149,21 @@ class MainWindow(QMainWindow):
         self.agent.on_disconnect = self.disconnect_signal.emit
         self.agent.on_working_state_changed = self.working_signal.emit
         
+        self.working_timer = QTimer()
+        self.working_timer.timeout.connect(self.animate_working)
+        self.working_dots = 0
+        
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
         main_layout = QVBoxLayout(main_widget)
         
-        # Header & Power Level
         header_layout = QHBoxLayout()
         header = QLabel("OmniGemini")
-        header.setStyleSheet("font-size: 24px; font-weight: bold; color: #2196F3;")
+        header.setStyleSheet("font-size: 24px; font-weight: bold; color: #89B4FA;")
         header_layout.addWidget(header)
         
-        self.working_lbl = QLabel("⚙️ WORKING...")
-        self.working_lbl.setStyleSheet("color: #FFEB3B; font-weight: bold; font-size: 14px;")
+        self.working_lbl = QLabel("⚙️ WORKING")
+        self.working_lbl.setStyleSheet("color: #F9E2AF; font-weight: bold; font-size: 14px;")
         self.working_lbl.setVisible(False)
         header_layout.addWidget(self.working_lbl)
         header_layout.addStretch()
@@ -149,44 +174,31 @@ class MainWindow(QMainWindow):
             is_admin = False
             
         power_lbl = QLabel(f"⚡ POWER LEVEL: {'ADMIN' if is_admin else 'USER'}")
-        power_lbl.setStyleSheet(f"font-weight: bold; color: {'#F44336' if is_admin else '#FF9800'}; padding: 5px; border: 1px solid;")
-        power_lbl.setToolTip(
-            "<b>USER MODE (Default)</b><br>"
-            "<i>Pros:</i> Safe. The AI cannot accidentally modify system files or change critical Windows settings.<br>"
-            "<i>Cons:</i> The AI cannot install software, edit files in protected folders (like Program Files), or run administrative PowerShell commands.<br><br>"
-            "<b>ADMIN MODE (Run as Administrator)</b><br>"
-            "<i>Pros:</i> Maximum Power. The AI can manage your entire computer, install programs, edit any file, and fully utilize all MCP capabilities.<br>"
-            "<i>Cons:</i> Dangerous. The AI has the power to delete important files or execute risky scripts if instructed to do so."
-        )
+        power_lbl.setStyleSheet(f"font-weight: bold; color: {'#F38BA8' if is_admin else '#FAB387'}; padding: 5px; border: 1px solid {'#F38BA8' if is_admin else '#FAB387'}; border-radius: 4px;")
         header_layout.addWidget(power_lbl)
         main_layout.addLayout(header_layout)
         
-        # Active MCPs Label
         self.mcp_lbl = QLabel("🔌 Loaded MCPs: Waiting for CLI...")
-        self.mcp_lbl.setStyleSheet("color: #00BCD4; font-size: 11px; font-style: italic; margin-bottom: 5px;")
+        self.mcp_lbl.setStyleSheet("color: #89DCEB; font-size: 12px; font-style: italic; margin-bottom: 5px;")
         main_layout.addWidget(self.mcp_lbl)
         
-        # Content Splitter
         splitter = QSplitter(Qt.Orientation.Horizontal)
         main_layout.addWidget(splitter)
         
-        # Left Panel: Conversation & Controls
         left_panel = QWidget()
         left_layout = QVBoxLayout(left_panel)
-        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setContentsMargins(0, 0, 10, 0)
         
-        # Top Bar (Connect & Settings & Memory)
         top_layout = QHBoxLayout()
         self.connect_btn = QPushButton("Connect")
-        self.connect_btn.setStyleSheet("background-color: #4CAF50; color: white; padding: 10px; font-weight: bold;")
+        self.connect_btn.setStyleSheet("background-color: #A6E3A1; color: #11111B; padding: 10px; font-weight: bold; border: none;")
         self.connect_btn.clicked.connect(self.toggle_connection)
         
         self.memory_btn = QPushButton("🧠 Memory Manager")
-        self.memory_btn.setStyleSheet("background-color: #9C27B0; color: white; padding: 10px;")
+        self.memory_btn.setStyleSheet("background-color: #CBA6F7; color: #11111B; padding: 10px; font-weight: bold; border: none;")
         self.memory_btn.clicked.connect(self.open_memory_manager)
         
         self.settings_btn = QPushButton("⚙ Settings")
-        self.settings_btn.setStyleSheet("background-color: #333333; color: white; padding: 10px;")
         self.settings_btn.clicked.connect(self.open_settings)
         
         top_layout.addWidget(self.connect_btn)
@@ -194,29 +206,25 @@ class MainWindow(QMainWindow):
         top_layout.addWidget(self.settings_btn)
         left_layout.addLayout(top_layout)
         
-        # Voice Meter
         meter_layout = QHBoxLayout()
         meter_layout.addWidget(QLabel("🎤 MIC:"))
         self.vol_meter = QProgressBar()
         self.vol_meter.setRange(0, 10000) 
         self.vol_meter.setTextVisible(False)
-        self.vol_meter.setStyleSheet("QProgressBar::chunk { background-color: #4CAF50; }")
-        self.vol_meter.setFixedHeight(10)
+        self.vol_meter.setFixedHeight(8)
         meter_layout.addWidget(self.vol_meter)
         left_layout.addLayout(meter_layout)
         
-        # Vision Bar
         vision_layout = QHBoxLayout()
         self.send_cam_btn = QPushButton("📸 Share Webcam")
-        self.send_cam_btn.setStyleSheet("background-color: #00BCD4; color: white; padding: 10px;")
-        self.send_cam_btn.clicked.connect(lambda: asyncio.create_task(self.agent.send_vision_frame("webcam")))
+        self.send_cam_btn.setStyleSheet("background-color: #89DCEB; color: #11111B; font-weight: bold;")
+        self.send_cam_btn.clicked.connect(lambda: asyncio.create_task(self.agent.send_vision_frame("webcam", force=True)))
         
         self.send_screen_btn = QPushButton("🖥️ Share Screen")
-        self.send_screen_btn.setStyleSheet("background-color: #9C27B0; color: white; padding: 10px;")
-        self.send_screen_btn.clicked.connect(lambda: asyncio.create_task(self.agent.send_vision_frame("screen")))
+        self.send_screen_btn.setStyleSheet("background-color: #F5C2E7; color: #11111B; font-weight: bold;")
+        self.send_screen_btn.clicked.connect(lambda: asyncio.create_task(self.agent.send_vision_frame("screen", force=True)))
         
         self.auto_vision_btn = QPushButton("👁️ Auto-Vision: OFF")
-        self.auto_vision_btn.setStyleSheet("background-color: #333333; color: white; padding: 10px;")
         self.auto_vision_btn.setCheckable(True)
         self.auto_vision_btn.clicked.connect(self.toggle_auto_vision)
         
@@ -225,21 +233,17 @@ class MainWindow(QMainWindow):
         vision_layout.addWidget(self.auto_vision_btn)
         left_layout.addLayout(vision_layout)
         
-        # Log Area
         self.log_area = QTextEdit()
         self.log_area.setReadOnly(True)
-        self.log_area.setStyleSheet("background-color: #1e1e1e; color: #E0E0E0; font-family: Consolas, monospace; font-size: 13px; padding: 10px; border: 1px solid #333;")
         left_layout.addWidget(self.log_area)
         
-        # Text Input Area
         input_layout = QHBoxLayout()
         self.text_input = QLineEdit()
         self.text_input.setPlaceholderText("Type a prompt and press Enter...")
-        self.text_input.setStyleSheet("background-color: #222; color: #FFF; padding: 10px; border: 1px solid #333;")
         self.text_input.returnPressed.connect(self.handle_text_submit)
         
         self.send_btn = QPushButton("Send")
-        self.send_btn.setStyleSheet("background-color: #2196F3; color: white; padding: 10px;")
+        self.send_btn.setStyleSheet("background-color: #89B4FA; color: #11111B; padding: 10px; font-weight: bold;")
         self.send_btn.clicked.connect(self.handle_text_submit)
         
         input_layout.addWidget(self.text_input)
@@ -248,55 +252,72 @@ class MainWindow(QMainWindow):
         
         splitter.addWidget(left_panel)
         
-        # Right Panel: Vision & Steering
         right_panel = QWidget()
         right_panel.setFixedWidth(350)
         right_layout = QVBoxLayout(right_panel)
+        right_layout.setContentsMargins(10, 0, 0, 0)
         
         preview_label = QLabel("VISUAL CONTEXT")
-        preview_label.setStyleSheet("font-weight: bold; color: #888; font-size: 10px;")
+        preview_label.setStyleSheet("font-weight: bold; color: #6C7086; font-size: 11px; letter-spacing: 1px;")
         preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         right_layout.addWidget(preview_label)
         
         self.vision_preview = QLabel("No context shared yet.")
-        self.vision_preview.setStyleSheet("background-color: #000; border: 2px solid #333; color: #444;")
+        self.vision_preview.setStyleSheet("background-color: #11111B; border: 1px solid #313244; color: #6C7086; border-radius: 6px;")
         self.vision_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.vision_preview.setMinimumHeight(200)
         self.vision_preview.setScaledContents(True)
         right_layout.addWidget(self.vision_preview)
         
         steering_label = QLabel("🧠 AI STEERING (DIRECTIVES)")
-        steering_label.setStyleSheet("font-weight: bold; color: #2196F3; font-size: 10px; margin-top: 20px;")
+        steering_label.setStyleSheet("font-weight: bold; color: #89B4FA; font-size: 11px; margin-top: 20px; letter-spacing: 1px;")
         right_layout.addWidget(steering_label)
         
         self.steering_text = QTextEdit()
         self.steering_text.setPlaceholderText("Enter personality instructions here...")
-        self.steering_text.setStyleSheet("background-color: #222; color: #FFF; border: 1px solid #2196F3; font-size: 12px;")
+        self.steering_text.setStyleSheet("border: 1px solid #89B4FA;")
         self.steering_text.textChanged.connect(self.update_steering)
         right_layout.addWidget(self.steering_text)
         
         help_txt = QLabel("Changes apply on next connection.")
-        help_txt.setStyleSheet("color: #666; font-size: 10px; font-style: italic;")
+        help_txt.setStyleSheet("color: #6C7086; font-size: 11px; font-style: italic;")
         right_layout.addWidget(help_txt)
         
         right_layout.addStretch()
         splitter.addWidget(right_panel)
         
         self.agent.logger = self.log_message
-        self.log_message("[dim]Welcome to OmniGemini. Click Connect to begin.[/dim]")
+        self.log_message("[dim]Welcome to OmniGemini. Fetching system readiness...[/dim]")
         
-        # Fetch MCPs asynchronously on startup
         try:
             loop = asyncio.get_event_loop()
-            loop.create_task(self.fetch_mcps())
+            loop.create_task(self.fetch_mcps_and_warmup())
         except RuntimeError:
             pass
 
-    async def fetch_mcps(self):
+    def animate_working(self):
+        self.working_dots = (self.working_dots + 1) % 4
+        self.working_lbl.setText(f"⚙️ WORKING{'.' * self.working_dots}")
+
+    async def fetch_mcps_and_warmup(self):
         try:
             cli_path = self.agent.config.get("gemini_cli_path", "gemini")
             import subprocess
-            res = await asyncio.to_thread(subprocess.run, [cli_path, "mcp", "list"], capture_output=True, text=True, shell=True)
+            import shutil
+            resolved_path = shutil.which(cli_path)
+            if not resolved_path:
+                resolved_path = cli_path
+            
+            # WARM UP: Check version
+            self.log_message("[dim]Warming up Gemini CLI...[/dim]")
+            version_res = await asyncio.to_thread(subprocess.run, [resolved_path, "--version"], capture_output=True, text=True, shell=True)
+            if version_res.returncode == 0:
+                v = version_res.stdout.strip()
+                self.log_message(f"[green]Gemini CLI is ready![/green] [dim]({v})[/dim]")
+            else:
+                self.log_message("[red]Failed to warm up Gemini CLI. Is it in your PATH?[/red]")
+
+            res = await asyncio.to_thread(subprocess.run, [resolved_path, "mcp", "list"], capture_output=True, text=True, shell=True)
             output = res.stdout.strip()
             mcps = []
             for line in output.split('\n'):
@@ -329,11 +350,11 @@ class MainWindow(QMainWindow):
     def toggle_auto_vision(self, checked):
         if checked:
             self.auto_vision_btn.setText("👁️ Auto-Vision: ON")
-            self.auto_vision_btn.setStyleSheet("background-color: #4CAF50; color: white; padding: 10px; font-weight: bold;")
+            self.auto_vision_btn.setStyleSheet("background-color: #A6E3A1; color: #11111B; font-weight: bold;")
             asyncio.create_task(self.agent.toggle_auto_vision(True, "screen"))
         else:
             self.auto_vision_btn.setText("👁️ Auto-Vision: OFF")
-            self.auto_vision_btn.setStyleSheet("background-color: #333333; color: white; padding: 10px;")
+            self.auto_vision_btn.setStyleSheet("")
             asyncio.create_task(self.agent.toggle_auto_vision(False))
 
     def update_vision_preview(self, frame_bytes):
@@ -349,16 +370,22 @@ class MainWindow(QMainWindow):
 
     def handle_agent_disconnect(self):
         self.connect_btn.setText("Connect")
-        self.connect_btn.setStyleSheet("background-color: #4CAF50; color: white; padding: 10px; font-weight: bold;")
+        self.connect_btn.setStyleSheet("background-color: #A6E3A1; color: #11111B; padding: 10px; font-weight: bold; border: none;")
         self.connect_btn.setEnabled(True)
         if hasattr(self, 'auto_vision_btn'):
             self.auto_vision_btn.setChecked(False)
             self.auto_vision_btn.setText("👁️ Auto-Vision: OFF")
-            self.auto_vision_btn.setStyleSheet("background-color: #333333; color: white; padding: 10px;")
+            self.auto_vision_btn.setStyleSheet("")
             asyncio.create_task(self.agent.toggle_auto_vision(False))
             
     def toggle_working_indicator(self, is_working):
-        self.working_lbl.setVisible(is_working)
+        if is_working:
+            self.working_lbl.setText("⚙️ WORKING")
+            self.working_lbl.setVisible(True)
+            self.working_timer.start(400)
+        else:
+            self.working_timer.stop()
+            self.working_lbl.setVisible(False)
 
     def open_settings(self):
         dlg = SettingsDialog(self.agent.config, self)
@@ -370,7 +397,7 @@ class MainWindow(QMainWindow):
     def toggle_connection(self):
         if not self.agent.running:
             self.connect_btn.setText("Connecting...")
-            self.connect_btn.setStyleSheet("background-color: #FF9800; color: black; padding: 10px; font-weight: bold;")
+            self.connect_btn.setStyleSheet("background-color: #F9E2AF; color: #11111B; padding: 10px; font-weight: bold; border: none;")
             self.connect_btn.setEnabled(False)
             asyncio.create_task(self.start_agent())
         else:
@@ -380,7 +407,7 @@ class MainWindow(QMainWindow):
         success = await self.agent.connect()
         if success:
             self.connect_btn.setText("Disconnect")
-            self.connect_btn.setStyleSheet("background-color: #F44336; color: white; padding: 10px; font-weight: bold;")
+            self.connect_btn.setStyleSheet("background-color: #F38BA8; color: #11111B; padding: 10px; font-weight: bold; border: none;")
             self.connect_btn.setEnabled(True)
             asyncio.create_task(self.agent.send_audio_loop())
             asyncio.create_task(self.agent.receive_loop())
@@ -388,7 +415,7 @@ class MainWindow(QMainWindow):
             asyncio.create_task(self.agent.audio.speaker_loop())
         else:
             self.connect_btn.setText("Connect")
-            self.connect_btn.setStyleSheet("background-color: #4CAF50; color: white; padding: 10px; font-weight: bold;")
+            self.connect_btn.setStyleSheet("background-color: #A6E3A1; color: #11111B; padding: 10px; font-weight: bold; border: none;")
             self.connect_btn.setEnabled(True)
 
     async def stop_agent(self):

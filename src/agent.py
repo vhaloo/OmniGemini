@@ -65,7 +65,7 @@ class OmniAgent:
         self.base_instruction = (
             "You are OmniGemini, the ultimate Live Desktop Assistant. "
             "You have direct access to the user's system via powerful tools:\n"
-            "1. 'run_powershell': For immediate, tiny system checks or opening files (e.g., 'Invoke-Item path\\\\to\\\\file').\n"
+            "1. 'run_powershell': For immediate, tiny system checks or opening files (e.g., 'Invoke-Item path\\to\\file').\n"
             "2. 'delegate_gemini': The heavy lifter. The Gemini CLI has all the Model Context Protocol (MCP) servers, full file system access, and system mastery. 'gemini-3.1-flash-preview' is fully capable of using MCPs and should be your default choice.\n"
             "3. 'capture_screen' & 'capture_webcam': Use these tools AT ANY TIME to take a picture and see what the user is doing or looking at.\n"
             "IMPORTANT: If the user asks you to modify files, browse the web, or use MCPs (like Google Workspace for GMAIL/Calendar/Docs), YOU MUST use 'delegate_gemini'.\n"
@@ -110,7 +110,7 @@ class OmniAgent:
     async def _auto_vision_task(self, source):
         self.logger(f"[dim]Auto-Vision ({source}) started. Sending frames every 2 seconds...[/dim]")
         while self.running and self.session and self.auto_vision_active:
-            await self.send_vision_frame(source, silent=True)
+            await self.send_vision_frame(source, silent=True, force=False)
             await asyncio.sleep(2.0)
         self.logger(f"[dim]Auto-Vision stopped.[/dim]")
 
@@ -171,7 +171,6 @@ class OmniAgent:
             except Exception as e:
                 if self.running:
                     self.logger(f"[yellow]Audio send error: {e}[/yellow]")
-                    # Termination error?
                     if "timeout" in str(e).lower() or "close" in str(e).lower() or "1011" in str(e).lower():
                         await self.disconnect()
                         break
@@ -193,7 +192,6 @@ class OmniAgent:
                             self.logger("[yellow][User Interrupted AI generation][/yellow]")
                             self._append_log("System", "User Interrupted AI generation.")
                             self.audio.clear_speaker_queue()
-                            # Do NOT 'continue'. Let tools execute if they were part of the payload.
                         
                         if server_content.input_transcription:
                             text = server_content.input_transcription.text
@@ -241,31 +239,28 @@ class OmniAgent:
                                 prompt = args.get("prompt") if isinstance(args, dict) else getattr(args, "prompt", str(args))
                                 model_choice = args.get("model", "gemini-3.1-flash-preview") if isinstance(args, dict) else getattr(args, "model", "gemini-3.1-flash-preview")
                                 
-                                self.logger(f"[bold magenta]Tool:[/bold magenta] delegate_gemini\n[dim]Model: {model_choice}\nPrompt: {prompt}[/dim]")
-                                self._append_log("Tool Call", f"delegate_gemini [{model_choice}]: {prompt}")
+                                if "pro" in model_choice.lower():
+                                    actual_model = "gemini-2.5-pro"
+                                else:
+                                    actual_model = "gemini-3.1-flash-preview"
+                                
+                                self.logger(f"[bold magenta]Tool:[/bold magenta] delegate_gemini\n[dim]Model: {actual_model}\nPrompt: {prompt}[/dim]")
+                                self._append_log("Tool Call", f"delegate_gemini [{actual_model}]: {prompt}")
                                 
                                 cli_path = self.config.get("gemini_cli_path", "gemini")
                                 try:
                                     if self.on_working_state_changed:
                                         self.on_working_state_changed(True)
                                         
-                                    self.logger(f"[dim]Gemini CLI is running synchronously with {model_choice}...[/dim]")
+                                    self.logger(f"[dim]Gemini CLI is running synchronously with {actual_model}...[/dim]")
                                     
-                                    # Resolve absolute path for Windows to be absolutely sure
                                     resolved_path = shutil.which(cli_path)
                                     if not resolved_path:
                                         resolved_path = cli_path
                                         
-                                    args_list = [resolved_path, "--yolo", "--model", model_choice, "--include-directories", "C:\\", "-p", prompt]
+                                    args_list = [resolved_path, "--yolo", "--model", actual_model, "--include-directories", "C:\\", "-p", prompt]
                                     
-                                    # Convert list to a perfectly escaped string for the shell
                                     cmd_str = subprocess.list2cmdline(args_list)
-                                    
-                                    # We use create_subprocess_shell. It natively understands .cmd files and PATH.
-                                    # The -p flag prevents the CLI from becoming interactive.
-                                    # Critical Windows Fix: node-pty (used by Gemini CLI) crashes with 'AttachConsole failed' 
-                                    # if it doesn't have a console environment. CREATE_NO_WINDOW provisions a hidden console.
-                                    # We also pipe stdin to DEVNULL to guarantee it never hangs waiting for input.
                                     
                                     creation_flags = 0
                                     if os.name == 'nt':
@@ -286,8 +281,13 @@ class OmniAgent:
                                             break
                                         decoded_line = line.decode('utf-8', errors='replace')
                                         out_chunks.append(decoded_line)
-                                        # Extremely verbose logging: show every line the CLI outputs in the GUI
                                         self.logger(f"[dim][CLI][/dim] {decoded_line.strip()}")
+                                        
+                                        # Prevent memory explosion if output is insane
+                                        if len(out_chunks) > 2000:
+                                            out_chunks.append("\n...[OUTPUT TRUNCATED]...")
+                                            process.terminate()
+                                            break
                                         
                                     await process.wait()
                                     out = "".join(out_chunks)
@@ -313,7 +313,7 @@ class OmniAgent:
                                 frames_to_send.append(("webcam", 0))
                                 out = "Webcam captured successfully. The image will be sent to your visual context immediately after this response."
                                     
-                            out = out[:2000] + "\n... (truncated)" if len(out) > 2000 else out
+                            out = out[:10000] + "\n... (truncated)" if len(out) > 10000 else out
                             self._append_log("Tool Result", out)
                             func_responses.append(types.FunctionResponse(id=fc.id, name=fc.name, response={"result": out}))
                             
@@ -323,13 +323,11 @@ class OmniAgent:
                                     self.logger("[dim]Sending tool result back to Live API...[/dim]")
                                     await self.session.send_tool_response(function_responses=func_responses)
                                     
-                                    # Send frames AFTER resolving the tool call to respect the protocol
                                     for source, monitor_idx in frames_to_send:
-                                        await self.send_vision_frame(source, monitor_index=monitor_idx, silent=True)
+                                        await self.send_vision_frame(source, monitor_index=monitor_idx, silent=True, force=True)
                                 except Exception as e:
                                     self.logger(f"[red]Failed to send tool response or frame: {e}[/red]")
                 
-                # Async loop exit naturally
                 await asyncio.sleep(0.1)
                     
             except Exception as e:
@@ -337,7 +335,6 @@ class OmniAgent:
                     self.logger(f"[red]Connection lost: {e}[/red]")
                 break
                 
-        # Clean shutdown
         if self.running:
             await self.disconnect()
 
@@ -356,7 +353,7 @@ class OmniAgent:
         except Exception as e:
             self.logger(f"[red]Failed to send text: {e}[/red]")
 
-    async def send_vision_frame(self, source="webcam", monitor_index=0, silent=False):
+    async def send_vision_frame(self, source="webcam", monitor_index=0, silent=False, force=False):
         if not self.session:
             if not silent:
                 self.logger("[yellow]Cannot send frame: Not connected.[/yellow]")
@@ -365,22 +362,19 @@ class OmniAgent:
         frame_bytes = None
         if source == "webcam":
             await asyncio.to_thread(self.vision.start_camera)
-            frame_bytes = await asyncio.to_thread(self.vision.get_camera_frame_bytes)
+            frame_bytes = await asyncio.to_thread(self.vision.get_camera_frame_bytes, force)
         elif source == "screen":
-            frame_bytes = await asyncio.to_thread(self.vision.get_screen_frame_bytes, monitor_index)
+            frame_bytes = await asyncio.to_thread(self.vision.get_screen_frame_bytes, monitor_index, force)
             
         if frame_bytes:
             if self.on_frame_captured:
                 self.on_frame_captured(frame_bytes)
                 
-            # Save the latest frame for CLI delegation context
             latest_frame_path = os.path.abspath(os.path.join("logs", f"latest_{source}.jpg"))
             try:
                 with open(latest_frame_path, "wb") as f:
                     f.write(frame_bytes)
-                if not silent:
-                    self.logger(f"[dim]Saved frame to {latest_frame_path}[/dim]")
-            except Exception as e:
+            except Exception:
                 pass
 
             if not silent:
@@ -398,4 +392,5 @@ class OmniAgent:
                     self.logger(f"[red]Failed to send frame: {e}[/red]")
         else:
             if not silent:
-                self.logger(f"[red]Failed to capture from {source}.[/red]")
+                # self.logger(f"[dim]Frame from {source} skipped (no significant change or capture failed).[/dim]")
+                pass
