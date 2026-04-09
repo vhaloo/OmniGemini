@@ -337,7 +337,9 @@ class OmniAgent:
         if frame_bytes:
             if self.on_frame_captured: self.on_frame_captured(frame_bytes)
             try:
-                with open(os.path.join("logs", f"latest_{source}.jpg"), "wb") as f: f.write(frame_bytes)
+                def save_latest():
+                    with open(os.path.join("logs", f"latest_{source}.jpg"), "wb") as f: f.write(frame_bytes)
+                await asyncio.to_thread(save_latest)
             except: pass
             if not silent: self.logger(f"[bold blue]Context:[/bold blue] Sent {source} frame.")
             self._append_log("Vision", f"Sent {source}")
