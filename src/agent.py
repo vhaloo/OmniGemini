@@ -157,7 +157,8 @@ class OmniAgent:
             if self.session and self.running:
                 try:
                     await self.session.send_client_content(turns={"role": "user", "parts": [{"text": f"[SYSTEM: Background Task {task_id} FAILED: {e}]"}]}, turn_complete=True)
-                except: pass
+                except Exception as ex:
+                    self.logger(f"[red]Failed to send error fallback to session: {ex}[/red]")
         finally:
             self.active_background_tasks -= 1
             if self.on_working_state_changed and self.active_background_tasks <= 0:
@@ -176,7 +177,8 @@ class OmniAgent:
             try:
                 with open(self.log_path, "a", encoding="utf-8") as f:
                     f.write(f"{role}: {text}\n\n")
-            except: pass
+            except Exception as e:
+                self.logger(f"[red]Log append failed: {e}[/red]")
 
     async def toggle_auto_vision(self, state, source="webcam"):
         self.auto_vision_active = state
@@ -221,7 +223,8 @@ class OmniAgent:
         self.running = False
         if self._session_cm:
             try: await self._session_cm.__aexit__(None, None, None)
-            except: pass
+            except Exception as e:
+                self.logger(f"[red]Session exit error: {e}[/red]")
         self.session = None
         self._session_cm = None
         self.audio.stop()
@@ -343,7 +346,8 @@ class OmniAgent:
                 def save_latest():
                     with open(os.path.join("logs", f"latest_{source}.jpg"), "wb") as f: f.write(frame_bytes)
                 await asyncio.to_thread(save_latest)
-            except: pass
+            except Exception as e:
+                self.logger(f"[red]Vision frame save failed: {e}[/red]")
             if not silent: self.logger(f"[bold blue]Context:[/bold blue] Sent {source} frame.")
             self._append_log("Vision", f"Sent {source}")
             try:
