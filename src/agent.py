@@ -109,10 +109,9 @@ class OmniAgent:
             resolved_path = shutil.which(cli_path) or cli_path
                 
             args_list = [resolved_path, "--yolo", "--model", actual_model, "--include-directories", "C:\\", "-p", prompt]
-            cmd_str = subprocess.list2cmdline(args_list)
             
-            process = await asyncio.create_subprocess_shell(
-                cmd_str,
+            process = await asyncio.create_subprocess_exec(
+                *args_list,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,
                 stdin=subprocess.DEVNULL,
@@ -275,7 +274,11 @@ class OmniAgent:
                                 self.logger(f"[bold cyan]Tool:[/bold cyan] powershell: {cmd}")
                                 self._append_log("Tool", f"powershell: {cmd}")
                                 try:
-                                    process = await asyncio.create_subprocess_shell(f"powershell.exe -NoProfile -Command \"{cmd}\"", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+                                    process = await asyncio.create_subprocess_exec(
+                                        "powershell.exe", "-NoProfile", "-Command", cmd,
+                                        stdout=asyncio.subprocess.PIPE,
+                                        stderr=asyncio.subprocess.PIPE
+                                    )
                                     stdout, stderr = await process.communicate()
                                     out = (stdout + stderr).decode('utf-8', errors='replace') or "Success."
                                 except Exception as e: out = f"Error: {e}"
