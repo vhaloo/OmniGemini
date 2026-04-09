@@ -5,7 +5,7 @@ from PyQt6.QtCore import Qt
 from qasync import QEventLoop
 from src.config import load_config
 from src.agent import OmniAgent
-from src.gui import MainWindow
+from src.ui.main_window import MainWindow
 
 def run():
     # Enable High DPI scaling for 4K and Full HD screens

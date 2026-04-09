@@ -17,6 +17,8 @@ class AudioController:
         self.loudness_threshold = int(self.config.get("loudness_threshold", 8000))
         self.on_volume_changed = None 
         self.is_playing = False
+        self.last_play_time = 0
+        self.is_writing = False
 
     def start(self):
         self.running = True
@@ -64,6 +66,10 @@ class AudioController:
                 if self.on_volume_changed:
                     self.on_volume_changed(int(amplitude))
                 
+                import time
+                if self.is_playing and not self.is_writing and (time.time() - self.last_play_time > 0.3) and self.speaker_queue.empty():
+                    self.is_playing = False
+
                 if self.is_playing and self.config.get("ducking_enabled", True):
                     # Hard Ducking: Send pure silence to prevent echo but keep stream alive
                     send_data = bytes(bytearray(len(data))) 
@@ -78,19 +84,20 @@ class AudioController:
                 await asyncio.sleep(0.01)
 
     async def speaker_loop(self):
+        import time
         while self.running and self.stream_out:
             try:
                 bytestream = await asyncio.wait_for(self.speaker_queue.get(), timeout=0.1)
                 self.is_playing = True
+                self.is_writing = True
                 await asyncio.to_thread(self.stream_out.write, bytestream)
+                self.last_play_time = time.time()
+                self.is_writing = False
             except asyncio.TimeoutError:
-                if self.is_playing:
-                    # Add a padding before releasing the ducking to avoid trailing echo
-                    await asyncio.sleep(0.3)
-                    if self.speaker_queue.empty():
-                        self.is_playing = False
+                pass
             except Exception:
                 self.is_playing = False
+                self.is_writing = False
                 await asyncio.sleep(0.01)
 
     def clear_speaker_queue(self):
