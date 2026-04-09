@@ -36,9 +36,9 @@ class OmniAgent:
         self.auto_vision_active = False
         
         # Tool Definitions
-        self.run_powershell = {
-            "name": "run_powershell",
-            "description": "Executes a short PowerShell command on the user's Windows machine. Good for quick system checks, opening folders, moving files, checking IP, etc.",
+        self.run_command = {
+            "name": "run_command",
+            "description": "Executes a short terminal command on the user's machine (PowerShell on Windows, bash/sh on Unix). Good for quick system checks, opening folders, moving files, checking IP, etc.",
             "parameters": {
                 "type": "OBJECT",
                 "properties": {
@@ -78,7 +78,7 @@ class OmniAgent:
         self.base_instruction = (
             "You are OmniGemini, the ultimate Live Desktop Assistant. "
             "You have direct access to the user's system via powerful tools:\n"
-            "1. 'run_powershell': For immediate, tiny system checks or opening files (e.g., 'Invoke-Item path\to\file').\n"
+            "1. 'run_command': For immediate, tiny system checks or opening files.\n"
             "2. 'delegate_gemini': The heavy lifter. The Gemini CLI has all the Model Context Protocol (MCP) servers, full file system access, and system mastery.\n"
             "3. 'capture_screen' & 'capture_webcam': Use these tools AT ANY TIME to take a picture and see what the user is doing or looking at.\n"
             "IMPORTANT: If the user asks you to modify files, browse the web, or use MCPs (like Google Workspace for GMAIL/Calendar/Docs), YOU MUST use 'delegate_gemini'.\n"
@@ -108,15 +108,19 @@ class OmniAgent:
             import shutil
             resolved_path = shutil.which(cli_path) or cli_path
                 
-            args_list = [resolved_path, "--yolo", "--model", actual_model, "--include-directories", "C:\\", "-p", prompt]
-            cmd_str = subprocess.list2cmdline(args_list)
+            include_dir = "C:\\" if os.name == 'nt' else os.path.expanduser("~")
+            args_list = [resolved_path, "--yolo", "--model", actual_model, "--include-directories", include_dir, "-p", prompt]
             
-            process = await asyncio.create_subprocess_shell(
-                cmd_str,
+            kwargs = {}
+            if os.name == 'nt':
+                kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
+
+            process = await asyncio.create_subprocess_exec(
+                *args_list,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,
                 stdin=subprocess.DEVNULL,
-                creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+                **kwargs
             )
             
             out_chunks = []
@@ -198,7 +202,7 @@ class OmniAgent:
         if not self.log_path: self._init_log()
         self.client = genai.Client(api_key=api_key)
         
-        tools = [{"function_declarations": [self.run_powershell, self.delegate_gemini, self.capture_screen, self.capture_webcam]}]
+        tools = [{"function_declarations": [self.run_command, self.delegate_gemini, self.capture_screen, self.capture_webcam]}]
         cfg = {
             "response_modalities": ["AUDIO"],
             "tools": tools,
@@ -270,12 +274,16 @@ class OmniAgent:
                         frames_to_send = []
                         for fc in response.tool_call.function_calls:
                             args = fc.args
-                            if fc.name == "run_powershell":
+                            if fc.name == "run_command":
                                 cmd = args.get("command", "")
-                                self.logger(f"[bold cyan]Tool:[/bold cyan] powershell: {cmd}")
-                                self._append_log("Tool", f"powershell: {cmd}")
+                                self.logger(f"[bold cyan]Tool:[/bold cyan] command: {cmd}")
+                                self._append_log("Tool", f"command: {cmd}")
                                 try:
-                                    process = await asyncio.create_subprocess_shell(f"powershell.exe -NoProfile -Command \"{cmd}\"", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+                                    if os.name == 'nt':
+                                        shell_cmd = f"powershell.exe -NoProfile -Command \"{cmd}\""
+                                    else:
+                                        shell_cmd = cmd
+                                    process = await asyncio.create_subprocess_shell(shell_cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
                                     stdout, stderr = await process.communicate()
                                     out = (stdout + stderr).decode('utf-8', errors='replace') or "Success."
                                 except Exception as e: out = f"Error: {e}"
